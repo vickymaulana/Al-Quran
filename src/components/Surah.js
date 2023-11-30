@@ -7,14 +7,17 @@ function Surah() {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        axios.get('https://api.quran.com/api/v4/chapters?language=id')
-            .then((response) => {
-                setData(response.data.chapters);
-            })
-            .catch((error) => {
-                console.error('Error fetching data: ', error);
-            });
+        fetchData();
     }, []);
+
+    const fetchData = async () => {
+        try {
+            const response = await axios.get('https://api.quran.com/api/v4/chapters?language=id');
+            setData(response.data.chapters);
+        } catch (error) {
+            console.error('Error fetching data: ', error);
+        }
+    };
 
     const handleSearch = (event) => {
         setSearchQuery(event.target.value);

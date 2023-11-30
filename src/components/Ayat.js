@@ -7,33 +7,27 @@ function Ayat() {
     const [translations, setTranslations] = useState(null);
     const [surahName, setSurahName] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [versesPerPage] = useState(50);
+    const versesPerPage = 50;
     const { chapter_number } = useParams();
 
     useEffect(() => {
-        axios.get(`https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number=${chapter_number}`)
-            .then((response) => {
-                setData(response.data.verses);
-            })
-            .catch((error) => {
+        const fetchData = async () => {
+            try {
+                const [versesResponse, translationsResponse, surahNameResponse] = await Promise.all([
+                    axios.get(`https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number=${chapter_number}`),
+                    axios.get(`https://quranenc.com/api/v1/translation/sura/indonesian_sabiq/${chapter_number}`),
+                    axios.get(`https://api.quran.com/api/v4/chapters/${chapter_number}?language=id`)
+                ]);
+
+                setData(versesResponse.data.verses);
+                setTranslations(translationsResponse.data.result);
+                setSurahName(surahNameResponse.data.chapter.name_simple);
+            } catch (error) {
                 console.error('Error fetching data: ', error);
-            });
+            }
+        };
 
-        axios.get(`https://quranenc.com/api/v1/translation/sura/indonesian_sabiq/${chapter_number}`)
-            .then((response) => {
-                setTranslations(response.data.result);
-            })
-            .catch((error) => {
-                console.error('Error fetching translations: ', error);
-            });
-
-        axios.get(`https://api.quran.com/api/v4/chapters/${chapter_number}?language=id`)
-            .then((response) => {
-                setSurahName(response.data.chapter.name_simple);
-            })
-            .catch((error) => {
-                console.error('Error fetching surah name: ', error);
-            });
+        fetchData();
     }, [chapter_number]);
 
     useEffect(() => {
