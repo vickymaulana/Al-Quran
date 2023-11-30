@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 
 function Ayat() {
     const [data, setData] = useState(null);
+    const [translations, setTranslations] = useState(null);
     const [surahName, setSurahName] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [versesPerPage] = useState(50);
@@ -16,6 +17,14 @@ function Ayat() {
             })
             .catch((error) => {
                 console.error('Error fetching data: ', error);
+            });
+
+        axios.get(`https://quranenc.com/api/v1/translation/sura/indonesian_sabiq/${chapter_number}`)
+            .then((response) => {
+                setTranslations(response.data.result);
+            })
+            .catch((error) => {
+                console.error('Error fetching translations: ', error);
             });
 
         axios.get(`https://api.quran.com/api/v4/chapters/${chapter_number}?language=id`)
@@ -40,10 +49,11 @@ function Ayat() {
             return (
                 <div className="space-y-4">
                     {currentVerses.map((verse, index) => (
-                        <div key={verse.id} className="bg-white p-4 rounded shadow" style={{ direction: 'rtl' }}>
-                            <h2 className="text-xl font-bold">{`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}</h2>
-                            <p className="text-gray-600">{verse.translations && verse.translations[0] && verse.translations[0].text}</p>
-                            {/* Add more fields as necessary */}
+                        <div key={verse.id} className="bg-white p-4 rounded shadow" style={{ direction: 'ltr' }}>
+                            <h2 className="text-xl font-bold text-right">{`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}</h2>
+                            <p className="text-gray-600 text-left">
+                                {translations && translations[index] && translations[index].translation}
+                            </p>
                         </div>
                     ))}
                 </div>
