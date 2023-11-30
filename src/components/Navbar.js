@@ -12,7 +12,7 @@ function Navbar() {
           Home
         </Link>
         <Link to="/surah" className="text-gray-300 hover:text-white">
-          Surah
+          Surat
         </Link>
         {/* Add more Link components for additional pages */}
       </div>
