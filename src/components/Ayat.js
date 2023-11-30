@@ -28,7 +28,7 @@ function Ayat() {
     }, [chapter_number]);
 
     useEffect(() => {
-        window.scrollTo(0, 0); // Scroll to top when pagination changes
+        window.scrollTo(0, 0);
     }, [currentPage]);
 
     const indexOfLastVerse = currentPage * versesPerPage;
