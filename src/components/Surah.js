@@ -37,10 +37,13 @@ function Surah() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                     {filteredData.map((surah) => (
                         <div key={surah.id} className="p-6 bg-white rounded-xl shadow-md">
-                            <Link to={`/ayat/${surah.id}`} className="text-xl font-medium text-black">Surat: {surah.name_simple}</Link>
+                            <Link to={`/ayat/${surah.id}`}>
+                            <div className="text-xl font-medium text-black" style={{ textDecoration: 'none' }}>
+                                Surat: {surah.name_simple}
+                            </div>
                             <p className="text-gray-500">Arti: {surah.translated_name.name}</p>
                             <p className="text-gray-500">Jumlah Ayat: {surah.verses_count}</p>
-                            <p className="text-gray-500">Surat Ke: {surah.id}</p>
+                            <p className="text-gray-500">Surat Ke: {surah.id}</p></Link>
                             {/* Add more fields as necessary */}
                         </div>
                     ))}
