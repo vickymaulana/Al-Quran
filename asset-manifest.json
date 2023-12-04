@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/vickymaulana/Al-Quran/static/css/main.b2aaf27e.css",
-    "main.js": "/vickymaulana/Al-Quran/static/js/main.b699faf1.js",
-    "static/js/787.10d64a2b.chunk.js": "/vickymaulana/Al-Quran/static/js/787.10d64a2b.chunk.js",
-    "index.html": "/vickymaulana/Al-Quran/index.html",
-    "main.b2aaf27e.css.map": "/vickymaulana/Al-Quran/static/css/main.b2aaf27e.css.map",
-    "main.b699faf1.js.map": "/vickymaulana/Al-Quran/static/js/main.b699faf1.js.map",
-    "787.10d64a2b.chunk.js.map": "/vickymaulana/Al-Quran/static/js/787.10d64a2b.chunk.js.map"
+    "main.css": "/static/css/main.b2aaf27e.css",
+    "main.js": "/static/js/main.81ce0518.js",
+    "static/js/787.10d64a2b.chunk.js": "/static/js/787.10d64a2b.chunk.js",
+    "index.html": "/index.html",
+    "main.b2aaf27e.css.map": "/static/css/main.b2aaf27e.css.map",
+    "main.81ce0518.js.map": "/static/js/main.81ce0518.js.map",
+    "787.10d64a2b.chunk.js.map": "/static/js/787.10d64a2b.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.b2aaf27e.css",
-    "static/js/main.b699faf1.js"
+    "static/js/main.81ce0518.js"
   ]
 }
