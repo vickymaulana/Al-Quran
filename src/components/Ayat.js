@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 function Ayat() {
     const [data, setData] = useState(null);
@@ -38,6 +39,11 @@ function Ayat() {
     const indexOfFirstVerse = indexOfLastVerse - versesPerPage;
     const currentVerses = data && data.length > 0 ? data.slice(indexOfFirstVerse, indexOfLastVerse) : [];
 
+    const verseContainerVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0 }
+    };
+
     const renderVerses = () => {
         if (currentVerses && currentVerses.length > 0) {
             return (
@@ -45,12 +51,20 @@ function Ayat() {
                     {currentVerses.map((verse, index) => {
                         const translationIndex = index + indexOfFirstVerse;
                         return (
-                            <div key={verse.id} className="bg-white p-4 rounded shadow" style={{ direction: 'ltr' }}>
+                            <motion.div 
+                                key={verse.id}
+                                className="bg-white p-4 rounded shadow"
+                                style={{ direction: 'ltr' }}
+                                initial="hidden"
+                                animate="visible"
+                                variants={verseContainerVariants}
+                                transition={{ duration: 0.5, delay: index * 0.1 }}
+                            >
                                 <h2 className="text-xl font-bold text-right">{`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}</h2>
                                 <p className="text-gray-600 text-left">
                                     {translations && translations[translationIndex] && translations[translationIndex].translation}
                                 </p>
-                            </div>
+                            </motion.div>
                         );
                     })}
                 </div>
@@ -69,23 +83,42 @@ function Ayat() {
         pageNumbers.push(i);
     }
 
-    return (
-        <div className="p-4">
-            <h1 className="text-2xl font-bold mb-4" style={{ direction: 'ltr' }}>{surahName}</h1>
-            {renderVerses()}
-            <div className="flex justify-center mt-4">
+    const renderBismillah = () => {
+        if (currentPage === 1) {
+            return (
+                <div className="text-center text-2xl font-bold mb-4">
+                    بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
+                </div>
+            );
+        }
+    };
+
+    const renderPagination = () => {
+        return (
+            <div className="flex justify-center mt-4 space-x-1">
                 {pageNumbers.map((pageNumber) => (
-                    <button
+                    <motion.button
                         key={pageNumber}
-                        className={`mx-2 px-4 py-2 rounded ${
+                        className={`px-4 py-2 rounded text-sm ${
                             pageNumber === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                        }`}
+                        } hover:bg-blue-400 hover:text-white transition duration-300`}
                         onClick={() => paginate(pageNumber)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                     >
                         {pageNumber}
-                    </button>
+                    </motion.button>
                 ))}
             </div>
+        );
+    };
+
+    return (
+        <div className="p-4">
+            {renderBismillah()}
+            <h1 className="text-2xl font-bold mb-4" style={{ direction: 'ltr' }}>{surahName}</h1>
+            {renderVerses()}
+            {renderPagination()}
         </div>
     );
 }
