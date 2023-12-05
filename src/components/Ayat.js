@@ -42,14 +42,17 @@ function Ayat() {
         if (currentVerses && currentVerses.length > 0) {
             return (
                 <div className="space-y-4">
-                    {currentVerses.map((verse, index) => (
-                        <div key={verse.id} className="bg-white p-4 rounded shadow" style={{ direction: 'ltr' }}>
-                            <h2 className="text-xl font-bold text-right">{`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}</h2>
-                            <p className="text-gray-600 text-left">
-                                {translations && translations[index] && translations[index].translation}
-                            </p>
-                        </div>
-                    ))}
+                    {currentVerses.map((verse, index) => {
+                        const translationIndex = index + indexOfFirstVerse;
+                        return (
+                            <div key={verse.id} className="bg-white p-4 rounded shadow" style={{ direction: 'ltr' }}>
+                                <h2 className="text-xl font-bold text-right">{`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}</h2>
+                                <p className="text-gray-600 text-left">
+                                    {translations && translations[translationIndex] && translations[translationIndex].translation}
+                                </p>
+                            </div>
+                        );
+                    })}
                 </div>
             );
         } else {
