@@ -54,6 +54,10 @@ npm run build
 
 This will generate a production-ready build in the `build` folder, optimized for performance.
 
+## Demo
+
+Explore the live demo of the Al-Quran ReactJS app on [mab.my.id](https://mab.my.id). Feel free to interact with the application and experience its features.
+
 ## Learn More
 
 Explore the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started) to learn more about the project structure and configuration.
