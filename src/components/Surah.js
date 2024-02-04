@@ -1,23 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useFetchData } from './useFetchData';
 
 function Surah() {
-    const [data, setData] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            const response = await axios.get('https://api.quran.com/api/v4/chapters?language=id');
-            setData(response.data.chapters);
-        } catch (error) {
-            console.error('Error fetching data: ', error);
-        }
-    };
+    const { data } = useFetchData('chapters');
 
     const handleSearch = (event) => {
         setSearchQuery(event.target.value);

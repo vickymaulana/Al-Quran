@@ -1,35 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useFetchData } from './useFetchData';
 
 function Ayat() {
-    const [data, setData] = useState(null);
-    const [translations, setTranslations] = useState(null);
-    const [surahName, setSurahName] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const versesPerPage = 50;
     const { chapter_number } = useParams();
+    const { data, translations, surahName } = useFetchData('verses', chapter_number);
+    const nextChapter = parseInt(chapter_number, 10) + 1;
+    const { surahName: nextSurahName } = useFetchData('verses', nextChapter);
+    const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [versesResponse, translationsResponse, surahNameResponse] = await Promise.all([
-                    axios.get(`https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number=${chapter_number}`),
-                    axios.get(`https://quranenc.com/api/v1/translation/sura/indonesian_sabiq/${chapter_number}`),
-                    axios.get(`https://api.quran.com/api/v4/chapters/${chapter_number}?language=id`)
-                ]);
-
-                setData(versesResponse.data.verses);
-                setTranslations(translationsResponse.data.result);
-                setSurahName(surahNameResponse.data.chapter.name_simple);
-            } catch (error) {
-                console.error('Error fetching data: ', error);
-            }
-        };
-
-        fetchData();
-    }, [chapter_number]);
+    const navigateToNextChapter = () => {
+        navigate(`/ayat/${nextChapter}`);
+    };
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -94,6 +79,8 @@ function Ayat() {
     };
 
     const renderPagination = () => {
+        const isLastPage = currentPage === pageNumbers.length;
+    
         return (
             <div className="flex justify-center mt-4 space-x-1">
                 {pageNumbers.map((pageNumber) => (
@@ -109,6 +96,14 @@ function Ayat() {
                         {pageNumber}
                     </motion.button>
                 ))}
+                {isLastPage && (
+                    <button
+                        className="px-4 py-2 rounded text-sm bg-green-500 text-white hover:bg-green-400 transition duration-300"
+                        onClick={navigateToNextChapter}
+                    >
+                        Surat Berikutnya: {nextSurahName}
+                    </button>
+                )}
             </div>
         );
     };
