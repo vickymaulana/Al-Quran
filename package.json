@@ -1,6 +1,7 @@
 {
   "name": "al-quran",
   "version": "0.1.0",
+  "author": "vicky",
   "private": true,
   "dependencies": {
     "@craco/craco": "^7.1.0",
