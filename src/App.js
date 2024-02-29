@@ -3,6 +3,7 @@ import Home from './components/Home';
 import Surah from './components/Surah';
 import Navbar from './components/Navbar';
 import Ayat from './components/Ayat';
+import Footer from './components/Footer';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/ayat/:chapter_number" element={<Ayat />} />
         {/* Add more Route components for additional pages */}
       </Routes>
+      <Footer />
     </Router>
   );
 }
