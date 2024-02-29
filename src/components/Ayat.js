@@ -23,7 +23,7 @@ function Ayat() {
 
     const indexOfLastVerse = currentPage * versesPerPage;
     const indexOfFirstVerse = indexOfLastVerse - versesPerPage;
-    const currentVerses = data && data.length > 0 ? data.slice(indexOfFirstVerse, indexOfLastVerse) : [];
+    const currentVerses = data?.slice(indexOfFirstVerse, indexOfLastVerse) || [];
 
     const verseContainerVariants = {
         hidden: { opacity: 0, y: 20 },
@@ -31,13 +31,13 @@ function Ayat() {
     };
 
     const renderVerses = () => {
-        if (currentVerses && currentVerses.length > 0) {
+        if (currentVerses.length > 0) {
             return (
                 <div className="space-y-4">
                     {currentVerses.map((verse, index) => {
                         const translationIndex = index + indexOfFirstVerse;
                         return (
-                            <motion.div 
+                            <motion.div
                                 key={verse.id}
                                 className="bg-white p-4 rounded shadow"
                                 style={{ direction: 'ltr' }}
@@ -48,7 +48,7 @@ function Ayat() {
                             >
                                 <h2 className="text-xl font-bold text-right">{`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}</h2>
                                 <p className="text-gray-600 text-left">
-                                    {translations && translations[translationIndex] && translations[translationIndex].translation}
+                                    {translations?.[translationIndex]?.translation}
                                 </p>
                             </motion.div>
                         );
@@ -64,10 +64,7 @@ function Ayat() {
         setCurrentPage(pageNumber);
     };
 
-    const pageNumbers = [];
-    for (let i = 1; i <= Math.ceil(data && data.length > 0 ? data.length / versesPerPage : 1); i++) {
-        pageNumbers.push(i);
-    }
+    const pageNumbers = Array.from({ length: Math.ceil(data?.length / versesPerPage) || 1 }, (_, i) => i + 1);
 
     const renderBismillah = () => {
         if (currentPage === 1) {
@@ -81,7 +78,7 @@ function Ayat() {
 
     const renderPagination = () => {
         const isLastPage = currentPage === pageNumbers.length;
-    
+
         return (
             <div className="flex justify-center mt-4 space-x-1">
                 {pageNumbers.map((pageNumber) => (
