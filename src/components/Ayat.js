@@ -14,6 +14,7 @@ function Ayat() {
 
     const navigateToNextChapter = () => {
         navigate(`/ayat/${nextChapter}`);
+        setCurrentPage(1);
     };
 
     useEffect(() => {
