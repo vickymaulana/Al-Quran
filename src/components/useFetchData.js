@@ -5,6 +5,7 @@ export const useFetchData = (type, chapter_number) => {
     const [data, setData] = useState(null);
     const [translations, setTranslations] = useState(null);
     const [surahName, setSurahName] = useState('');
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -25,12 +26,12 @@ export const useFetchData = (type, chapter_number) => {
                 }
             } catch (error) {
                 console.error('Error fetching data: ', error);
-                // Handle the error here (e.g., show an error message)
+                setError('gagal mengambil data'); 
             }
         };
 
         fetchData();
     }, [type, chapter_number]);
 
-    return { data, translations, surahName };
+    return { data, translations, surahName, error };
 };
