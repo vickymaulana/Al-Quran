@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchVerses, fetchTranslations, fetchSurahName, fetchChapters } from './apiService';
+import { fetchChapters, fetchVerses, fetchTranslations, fetchSurahName } from './apiService';
 
 export const useFetchData = (type, chapter_number) => {
     const [data, setData] = useState(null);
@@ -25,6 +25,7 @@ export const useFetchData = (type, chapter_number) => {
                 }
             } catch (error) {
                 console.error('Error fetching data: ', error);
+                // Handle the error here (e.g., show an error message)
             }
         };
 

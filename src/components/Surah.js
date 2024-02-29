@@ -14,7 +14,8 @@ function Surah() {
         const surahName = surah.name_simple.toLowerCase();
         const translatedName = surah.translated_name.name.toLowerCase();
         const surahId = surah.id.toString();
-        return surahName.includes(searchQuery.toLowerCase()) || translatedName.includes(searchQuery.toLowerCase()) || surahId.includes(searchQuery.toLowerCase());
+        const query = searchQuery.toLowerCase();
+        return surahName.includes(query) || translatedName.includes(query) || surahId.includes(query);
     }) : [];
 
     return (

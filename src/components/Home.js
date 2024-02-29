@@ -14,9 +14,19 @@ function Home() {
     };
   }, []);
 
-  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  const formattedDate = currentTime.toLocaleDateString('id-ID', options);
-  const formattedTime = currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+  const formatDate = (date) => {
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('id-ID', options);
+  };
+
+  const formatTime = (time) => {
+    return time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+  };
+
+  const { formattedDate, formattedTime } = {
+    formattedDate: formatDate(currentTime),
+    formattedTime: formatTime(currentTime),
+  };
 
   return (
     <div className="flex items-center justify-center h-screen bg-cover">
