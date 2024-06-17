@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 import { fetchChapters } from './apiService';
 import { getPrayerTimesByCoordinates } from './prayerTimeService';
-import { hadiths, duas } from './dailyContent'; // Import hadiths and duas
+import { hadiths, duas } from './dailyContent';
 
 function Home() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -20,6 +20,7 @@ function Home() {
 
   const month = (currentTime.getMonth() + 1).toString().padStart(2, '0');
   const year = currentTime.getFullYear();
+  const currentDate = currentTime.toLocaleDateString('id-ID');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -35,27 +36,40 @@ function Home() {
         const chaptersResponse = await fetchChapters();
         setChapters(chaptersResponse.data.chapters);
 
-        const randomChapter = chaptersResponse.data.chapters[Math.floor(Math.random() * chaptersResponse.data.chapters.length)];
-        const randomVerseNumber = Math.floor(Math.random() * randomChapter.verses_count) + 1;
-        setDailyVerse(`Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`);
+        const storedDate = localStorage.getItem('dailyContentDate');
+        if (storedDate === currentDate) {
+          setDailyVerse(localStorage.getItem('dailyVerse'));
+          setDailyHadith(localStorage.getItem('dailyHadith'));
+          setDailyDua(localStorage.getItem('dailyDua'));
+        } else {
+          const randomChapter = chaptersResponse.data.chapters[Math.floor(Math.random() * chaptersResponse.data.chapters.length)];
+          const randomVerseNumber = Math.floor(Math.random() * randomChapter.verses_count) + 1;
+          const newDailyVerse = `Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`;
+          setDailyVerse(newDailyVerse);
+          localStorage.setItem('dailyVerse', newDailyVerse);
 
-        const randomHadith = hadiths[Math.floor(Math.random() * hadiths.length)];
-        setDailyHadith(randomHadith);
+          const randomHadith = hadiths[Math.floor(Math.random() * hadiths.length)];
+          setDailyHadith(randomHadith);
+          localStorage.setItem('dailyHadith', randomHadith);
 
-        const randomDua = duas[Math.floor(Math.random() * duas.length)];
-        setDailyDua(randomDua);
+          const randomDua = duas[Math.floor(Math.random() * duas.length)];
+          setDailyDua(randomDua);
+          localStorage.setItem('dailyDua', randomDua);
+
+          localStorage.setItem('dailyContentDate', currentDate);
+        }
 
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(async (position) => {
             const { latitude, longitude } = position.coords;
-            
-            // Lakukan reverse geocoding untuk mendapatkan nama kota berdasarkan koordinat
+
+            // Perform reverse geocoding to get the city name based on coordinates
             const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
             const userCity = response.data.address.city || response.data.address.town || response.data.address.village;
             setCity(userCity);
 
             const times = await getPrayerTimesByCoordinates(userCity, month, year);
-            
+
             const todayTimes = times.find(time => new Date(time.tanggal).getDate() === currentTime.getDate());
             if (todayTimes) {
               setPrayerTimes({
@@ -82,7 +96,7 @@ function Home() {
     };
 
     fetchData();
-  }, [month, year]);
+  }, [month, year, currentTime, currentDate]);
 
   const formatDate = (date) => {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
