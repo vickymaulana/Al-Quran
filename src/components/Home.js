@@ -63,7 +63,6 @@ function Home() {
           navigator.geolocation.getCurrentPosition(async (position) => {
             const { latitude, longitude } = position.coords;
 
-            // Perform reverse geocoding to get the city name based on coordinates
             const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
             const userCity = response.data.address.city || response.data.address.town || response.data.address.village;
             setCity(userCity);

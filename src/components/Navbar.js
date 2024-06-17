@@ -9,11 +9,11 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="flex items-center justify-between bg-gray-900 py-4 px-6">
+    <nav className="flex items-center justify-between bg-gray-900 py-4 px-6 shadow-lg">
       <div className="flex items-center">
         <span className="text-white text-2xl font-bold">Al-Quran App</span>
       </div>
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-6">
         <NavLink to="/" label="Home" active={isActive('/')} />
         <NavLink to="/surah" label="Surat" active={isActive('/surah')} />
         {/* Add more NavLink components for additional pages */}
@@ -24,7 +24,7 @@ const Navbar = () => {
 
 const NavLink = ({ to, label, active }) => {
   const activeClassName = "text-blue-500 border-b-2 border-blue-500";
-  const inactiveClassName = "text-gray-300 hover:text-white";
+  const inactiveClassName = "text-gray-300 hover:text-white transition-colors duration-200";
 
   return (
     <Link

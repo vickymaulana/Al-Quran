@@ -33,21 +33,21 @@ function Ayat() {
     const renderVerses = () => {
         if (currentVerses.length > 0) {
             return (
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {currentVerses.map((verse, index) => {
                         const translationIndex = index + indexOfFirstVerse;
                         return (
                             <motion.div
                                 key={verse.id}
-                                className="bg-white p-4 rounded shadow"
+                                className="bg-white p-6 rounded-lg shadow-lg"
                                 style={{ direction: 'ltr' }}
                                 initial="hidden"
                                 animate="visible"
                                 variants={verseContainerVariants}
                                 transition={{ duration: 0.5, delay: index * 0.1 }}
                             >
-                                <h2 className="text-xl font-bold text-right">{`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}</h2>
-                                <p className="text-gray-600 text-left">
+                                <h2 className="text-2xl font-bold text-right text-gray-800">{`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}</h2>
+                                <p className="text-gray-600 text-left mt-2">
                                     {translations?.[translationIndex]?.translation}
                                 </p>
                             </motion.div>
@@ -56,7 +56,7 @@ function Ayat() {
                 </div>
             );
         } else {
-            return <p>Loading data...</p>;
+            return <p className="text-center text-gray-500">Loading data...</p>;
         }
     };
 
@@ -69,7 +69,7 @@ function Ayat() {
     const renderBismillah = () => {
         if (currentPage === 1) {
             return (
-                <div className="text-center text-2xl font-bold mb-4">
+                <div className="text-center text-2xl font-bold mb-6 text-gray-800">
                     بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
                 </div>
             );
@@ -80,13 +80,13 @@ function Ayat() {
         const isLastPage = currentPage === pageNumbers.length;
 
         return (
-            <div className="flex justify-center mt-4 space-x-1">
+            <div className="flex justify-center mt-6 space-x-2">
                 {pageNumbers.map((pageNumber) => (
                     <motion.button
                         key={pageNumber}
-                        className={`px-4 py-2 rounded text-sm ${
-                            pageNumber === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                        } hover:bg-blue-400 hover:text-white transition duration-300`}
+                        className={`px-4 py-2 rounded-lg text-sm ${
+                            pageNumber === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-800'
+                        } hover:bg-blue-500 hover:text-white transition duration-300`}
                         onClick={() => paginate(pageNumber)}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
@@ -96,7 +96,7 @@ function Ayat() {
                 ))}
                 {isLastPage && (
                     <button
-                        className="px-4 py-2 rounded text-sm bg-green-500 text-white hover:bg-green-400 transition duration-300"
+                        className="px-4 py-2 rounded-lg text-sm bg-green-600 text-white hover:bg-green-500 transition duration-300"
                         onClick={navigateToNextChapter}
                     >
                         Surat Berikutnya: {nextSurahName}
@@ -107,9 +107,9 @@ function Ayat() {
     };
 
     return (
-        <div className="p-4">
+        <div className="max-w-4xl mx-auto p-6">
             {renderBismillah()}
-            <h1 className="text-2xl font-bold mb-4" style={{ direction: 'ltr' }}>{surahName}</h1>
+            <h1 className="text-3xl font-bold mb-6 text-center text-gray-900" style={{ direction: 'ltr' }}>{surahName}</h1>
             {renderVerses()}
             {renderPagination()}
         </div>
