@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useFetchData } from './useFetchData';
 import { ThemeContext } from '../ThemeContext';
+import { FiBookmark } from 'react-icons/fi';
 
 function Ayat() {
   const { isDarkTheme } = useContext(ThemeContext);
@@ -14,6 +15,10 @@ function Ayat() {
   const navigate = useNavigate();
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [bookmarks, setBookmarks] = useState(() => {
+    const stored = localStorage.getItem('bookmarkedVerses');
+    return stored ? JSON.parse(stored) : [];
+  });
 
   const navigateToNextChapter = () => {
     navigate(`/ayat/${nextChapter}`);
@@ -27,6 +32,28 @@ function Ayat() {
   const indexOfLastVerse = currentPage * versesPerPage;
   const indexOfFirstVerse = indexOfLastVerse - versesPerPage;
   const currentVerses = data?.slice(indexOfFirstVerse, indexOfLastVerse) || [];
+
+  const toggleBookmark = (verseNumber, verseText, translation) => {
+    const key = `${chapter_number}:${verseNumber}`;
+    const existing = bookmarks.find((b) => b.key === key);
+    let updated;
+    if (existing) {
+      updated = bookmarks.filter((b) => b.key !== key);
+    } else {
+      updated = [
+        ...bookmarks,
+        {
+          key,
+          surahName,
+          verseNumber,
+          text: verseText,
+          translation,
+        },
+      ];
+    }
+    setBookmarks(updated);
+    localStorage.setItem('bookmarkedVerses', JSON.stringify(updated));
+  };
 
   const verseContainerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -62,6 +89,24 @@ function Ayat() {
                 >
                   {translations?.[translationIndex]?.translation}
                 </p>
+                <button
+                  onClick={() =>
+                    toggleBookmark(
+                      index + indexOfFirstVerse + 1,
+                      verse.text_uthmani,
+                      translations?.[translationIndex]?.translation
+                    )
+                  }
+                  className={`mt-4 p-2 rounded-full border transition-colors ${
+                    bookmarks.find(
+                      (b) => b.key === `${chapter_number}:${index + indexOfFirstVerse + 1}`
+                    )
+                      ? 'bg-yellow-400 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-yellow-200'
+                  }`}
+                >
+                  <FiBookmark />
+                </button>
               </motion.div>
             );
           })}

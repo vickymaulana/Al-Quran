@@ -58,6 +58,10 @@ This will generate a production-ready build in the `build` folder, optimized for
 
 Explore the live demo of the Al-Quran ReactJS app on [mab.my.id](https://mab.my.id). Feel free to interact with the application and experience its features.
 
+## Bookmarks
+
+Anda kini dapat menyimpan ayat favorit! Pada halaman ayat, klik ikon bookmark di setiap ayat untuk menyimpannya. Halaman **Bookmarks** akan menampilkan seluruh ayat yang sudah Anda tandai dan memungkinkan Anda menghapusnya kembali.
+
 ## Learn More
 
 Explore the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started) to learn more about the project structure and configuration.
