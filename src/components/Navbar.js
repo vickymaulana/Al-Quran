@@ -24,6 +24,7 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             <NavLink to="/" label="Home" active={isActive('/')} />
             <NavLink to="/surah" label="Surat" active={isActive('/surah')} />
+            <NavLink to="/bookmarks" label="Bookmarks" active={isActive('/bookmarks')} />
             {/* Tombol Tema */}
             <button
               onClick={toggleTheme}
