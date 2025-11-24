@@ -1,91 +1,56 @@
 # Al-Quran ReactJS App
 
 This project, named Al-Quran ReactJS, is a modern web application developed using ReactJS and styled with Tailwind CSS. The application integrates with a RESTful API to provide a seamless experience for users.
+**Al-Quran — React**
 
-## Developer
 - **Developer:** Vicky Maulana
 
-## Getting Started
+**Overview:**
+- Lightweight Quran reader built with React, Tailwind CSS, Framer Motion and Axios.
+- Uses public Quran APIs to fetch surah/verse text and Indonesian translations.
 
-To run the Al-Quran ReactJS app locally, follow these steps:
+**Features:**
+- View full surah and paginate verses (50 verses per page).
+- Copy verse link (updates URL hash) and share.
+- Bookmark verses (saved to `localStorage`).
+- Search (uses API with fallback search if needed).
+- Dark/light theme support.
 
-1. Clone the repository to your local machine.
-2. Navigate to the project directory.
+**Quick Start**
+- Clone the repo and install dependencies:
 
-### Installation
-
-Use the following command to install the required dependencies:
-
-```bash
+```powershell
+git clone <repo-url>
+cd Al-Quran
 npm install
 ```
 
-### Running the App
+- Run the app in development mode:
 
-Once the dependencies are installed, start the development server with the following command:
-
-```bash
+```powershell
 npm start
 ```
 
-This will launch the app in development mode, and you can access it by opening [http://localhost:3000](http://localhost:3000) in your web browser.
+Open `http://localhost:3000`.
 
-The page will automatically reload when you make changes to the code, and any lint errors will be displayed in the console.
+**Scripts**
+- `npm start` — Run dev server (uses `craco`).
+- `npm run build` — Create production build (output in `build/`).
+- `npm test` — Run tests.
 
-## Available Scripts
+**Notable Implementation Details**
+- Centralized API helpers in `src/components/apiService.js` (axios instances, timeouts, cancellation support).
+- Data hook `src/components/useFetchData.js` provides `{ data, translations, surahName, loading, error, refetch }` and uses `AbortController`.
+- Bookmarks persist in `localStorage` under the `bookmarkedVerses` key.
 
-### Running Tests
+**Development Notes & Recommendations**
+- The project uses Tailwind v2 compatibility build in `package.json`. Consider upgrading the Tailwind/PostCSS toolchain for newer features.
+- The app intentionally fetches translations from a separate provider; network errors are handled gracefully with user-facing loading/error states.
 
-To launch the test runner in interactive watch mode, use the following command:
+**Contributing**
+- Make a branch, open a PR, describe changes. Keep changes focused and add tests if relevant.
 
-```bash
-npm test
-```
+**License**
+- This project does not include a license file. Add one if you intend to publish.
 
-Refer to the [running tests documentation](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### Building for Production
-
-Build the app for production using the following command:
-
-```bash
-npm run build
-```
-
-This will generate a production-ready build in the `build` folder, optimized for performance.
-
-## Demo
-
-Explore the live demo of the Al-Quran ReactJS app on [mab.my.id](https://mab.my.id). Feel free to interact with the application and experience its features.
-
-## Bookmarks
-
-Anda kini dapat menyimpan ayat favorit! Pada halaman ayat, klik ikon bookmark di setiap ayat untuk menyimpannya. Halaman **Bookmarks** akan menampilkan seluruh ayat yang sudah Anda tandai dan memungkinkan Anda menghapusnya kembali.
-
-## Learn More
-
-Explore the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started) to learn more about the project structure and configuration.
-
-### Code Splitting
-
-Learn about code splitting [here](https://facebook.github.io/create-react-app/docs/code-splitting).
-
-### Analyzing the Bundle Size
-
-Understand how to analyze the bundle size [here](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size).
-
-### Making a Progressive Web App
-
-Follow the guidelines for making a Progressive Web App [here](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app).
-
-### Advanced Configuration
-
-For advanced configuration options, refer to the [advanced configuration documentation](https://facebook.github.io/create-react-app/docs/advanced-configuration).
-
-### Deployment
-
-Explore the deployment documentation [here](https://facebook.github.io/create-react-app/docs/deployment).
-
-### Troubleshooting
-
-If you encounter issues with minification during the build process, refer to the [troubleshooting guide](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify).
+If you want, I can continue by modernizing other components (`Home.js`, `Surah.js`, search, bookmarks page), add ESLint/Prettier configs, or migrate the project to TypeScript.

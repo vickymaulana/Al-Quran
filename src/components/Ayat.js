@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useFetchData } from './useFetchData';
+import { fetchSurahName } from './apiService';
 import { ThemeContext } from '../ThemeContext';
 import { FiBookmark } from 'react-icons/fi';
 
@@ -9,22 +10,41 @@ function Ayat() {
   const { isDarkTheme } = useContext(ThemeContext);
   const versesPerPage = 50;
   const { chapter_number } = useParams();
-  const { data, translations, surahName } = useFetchData('verses', chapter_number);
+  const { data, translations, surahName, loading } = useFetchData('verses', chapter_number);
   const nextChapter = parseInt(chapter_number, 10) + 1;
-  const { surahName: nextSurahName } = useFetchData('verses', nextChapter);
+  const [nextSurahName, setNextSurahName] = useState('');
   const navigate = useNavigate();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedVerse, setCopiedVerse] = useState(null);
   const [bookmarks, setBookmarks] = useState(() => {
-    const stored = localStorage.getItem('bookmarkedVerses');
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = localStorage.getItem('bookmarkedVerses');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
   });
+  const timeoutsRef = useRef([]);
 
   const navigateToNextChapter = () => {
     navigate(`/ayat/${nextChapter}`);
     setCurrentPage(1);
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadNext = async () => {
+      try {
+        const res = await fetchSurahName(nextChapter, { signal: controller.signal });
+        setNextSurahName(res?.data?.chapter?.name_simple || '');
+      } catch (e) {
+        // ignore errors for next surah name
+      }
+    };
+    loadNext();
+    return () => controller.abort();
+  }, [nextChapter]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -69,30 +89,35 @@ function Ayat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.hash, data, currentPage]);
 
+  // cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach((t) => clearTimeout(t));
+      timeoutsRef.current = [];
+    };
+  }, []);
+
   const indexOfLastVerse = currentPage * versesPerPage;
   const indexOfFirstVerse = indexOfLastVerse - versesPerPage;
   const currentVerses = data?.slice(indexOfFirstVerse, indexOfLastVerse) || [];
 
   const toggleBookmark = (verseNumber, verseText, translation) => {
     const key = `${chapter_number}:${verseNumber}`;
-    const existing = bookmarks.find((b) => b.key === key);
-    let updated;
-    if (existing) {
-      updated = bookmarks.filter((b) => b.key !== key);
-    } else {
-      updated = [
-        ...bookmarks,
-        {
-          key,
-          surahName,
-          verseNumber,
-          text: verseText,
-          translation,
-        },
-      ];
-    }
-    setBookmarks(updated);
-    localStorage.setItem('bookmarkedVerses', JSON.stringify(updated));
+    setBookmarks((prev) => {
+      const existing = prev.find((b) => b.key === key);
+      const updated = existing
+        ? prev.filter((b) => b.key !== key)
+        : [
+            ...prev,
+            { key, surahName, verseNumber, text: verseText, translation },
+          ];
+      try {
+        localStorage.setItem('bookmarkedVerses', JSON.stringify(updated));
+      } catch (e) {
+        // ignore storage errors
+      }
+      return updated;
+    });
   };
 
   const verseContainerVariants = {
@@ -127,10 +152,17 @@ function Ayat() {
                       <button
                         onClick={async () => {
                           const url = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
-                          try {
-                            await navigator.clipboard.writeText(url);
-                          } catch (e) {
-                            // fallback
+                          const copyText = async (text) => {
+                            try {
+                              await navigator.clipboard.writeText(text);
+                              return true;
+                            } catch (e) {
+                              return false;
+                            }
+                          };
+
+                          const ok = await copyText(url);
+                          if (!ok) {
                             const tmp = document.createElement('input');
                             tmp.value = url;
                             document.body.appendChild(tmp);
@@ -138,9 +170,11 @@ function Ayat() {
                             document.execCommand('copy');
                             document.body.removeChild(tmp);
                           }
+
                           window.history.replaceState(null, '', `#verse-${globalVerseNumber}`);
                           setCopiedVerse(globalVerseNumber);
-                          setTimeout(() => setCopiedVerse(null), 2000);
+                          const t = setTimeout(() => setCopiedVerse(null), 2000);
+                          timeoutsRef.current.push(t);
                         }}
                         className="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 transition"
                         aria-label={`Copy link to verse ${globalVerseNumber}`}
@@ -168,9 +202,7 @@ function Ayat() {
                     )
                   }
                   className={`mt-4 p-2 rounded-full border transition-colors ${
-                    bookmarks.find(
-                      (b) => b.key === `${chapter_number}:${index + indexOfFirstVerse + 1}`
-                    )
+                    bookmarks.find((b) => b.key === `${chapter_number}:${index + indexOfFirstVerse + 1}`)
                       ? 'bg-yellow-400 text-white'
                       : 'bg-gray-200 text-gray-700 hover:bg-yellow-200'
                   }`}
@@ -191,7 +223,7 @@ function Ayat() {
     setCurrentPage(pageNumber);
   };
 
-  const totalPages = Math.ceil(data?.length / versesPerPage) || 1;
+  const totalPages = Math.ceil((data?.length || 0) / versesPerPage) || 1;
   const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   const renderBismillah = () => {
@@ -254,10 +286,16 @@ function Ayat() {
       }`}
     >
       <div className="container mx-auto px-4">
-        <h1 className="text-4xl font-bold mb-6 text-center">{surahName}</h1>
+        <h1 className="text-4xl font-bold mb-6 text-center">{surahName || 'Memuat...'}</h1>
         {renderBismillah()}
-        {renderVerses()}
-        {renderPagination()}
+        {loading ? (
+          <p className="text-center text-gray-500 mt-6">Memuat data...</p>
+        ) : (
+          <>
+            {renderVerses()}
+            {renderPagination()}
+          </>
+        )}
       </div>
     </div>
   );
