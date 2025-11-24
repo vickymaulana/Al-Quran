@@ -7,6 +7,7 @@ import { ThemeProvider } from './ThemeContext';
 import Ayat from './components/Ayat';
 import Footer from './components/Footer';
 import Bookmarks from './components/Bookmarks';
+import SearchResults from './components/SearchResults';
 
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/surah" element={<Surah />} />
+          <Route path="/search" element={<SearchResults />} />
           <Route path="/ayat/:chapter_number" element={<Ayat />} />
           <Route path="/bookmarks" element={<Bookmarks />} />
         </Routes>

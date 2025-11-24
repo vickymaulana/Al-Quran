@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useFetchData } from './useFetchData';
 import { ThemeContext } from '../ThemeContext';
@@ -15,6 +15,7 @@ function Ayat() {
   const navigate = useNavigate();
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [copiedVerse, setCopiedVerse] = useState(null);
   const [bookmarks, setBookmarks] = useState(() => {
     const stored = localStorage.getItem('bookmarkedVerses');
     return stored ? JSON.parse(stored) : [];
@@ -28,6 +29,45 @@ function Ayat() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentPage]);
+
+  // If navigated with a hash (e.g. #verse-10), scroll to that verse and set page.
+  const location = useLocation();
+  const [highlighted, setHighlighted] = useState(null);
+
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+
+    const hash = location.hash || window.location.hash;
+    if (!hash) return;
+
+    const match = hash.match(/#?verse-(\d+)/i);
+    if (!match) return;
+
+    const verseNumber = parseInt(match[1], 10);
+    if (!verseNumber || verseNumber <= 0) return;
+
+    const targetPage = Math.ceil(verseNumber / versesPerPage);
+    if (targetPage !== currentPage) {
+      setCurrentPage(targetPage);
+      // wait for render/pagination to update
+      setTimeout(() => {
+        const el = document.getElementById(`verse-${verseNumber}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHighlighted(verseNumber);
+          setTimeout(() => setHighlighted(null), 4000);
+        }
+      }, 250);
+    } else {
+      const el = document.getElementById(`verse-${verseNumber}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setHighlighted(verseNumber);
+        setTimeout(() => setHighlighted(null), 4000);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.hash, data, currentPage]);
 
   const indexOfLastVerse = currentPage * versesPerPage;
   const indexOfFirstVerse = indexOfLastVerse - versesPerPage;
@@ -66,12 +106,14 @@ function Ayat() {
         <div className="space-y-8">
           {currentVerses.map((verse, index) => {
             const translationIndex = index + indexOfFirstVerse;
+            const globalVerseNumber = index + indexOfFirstVerse + 1;
             return (
               <motion.div
+                id={`verse-${globalVerseNumber}`}
                 key={verse.id}
                 className={`${
                   isDarkTheme ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-                } p-6 rounded-lg shadow-md`}
+                } p-6 rounded-lg shadow-md ${highlighted === globalVerseNumber ? 'ring-4 ring-yellow-300' : ''}`}
                 style={{ direction: 'rtl' }}
                 initial="hidden"
                 animate="visible"
@@ -79,8 +121,36 @@ function Ayat() {
                 transition={{ duration: 0.5, delay: index * 0.05 }}
               >
                 <h2 className="text-2xl font-bold text-right mb-4">
-                  {`${index + indexOfFirstVerse + 1}. ${verse.text_uthmani}`}
+                      {`${globalVerseNumber}. ${verse.text_uthmani}`}
                 </h2>
+                    <div className="flex justify-end items-center gap-2 mt-2">
+                      <button
+                        onClick={async () => {
+                          const url = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
+                          try {
+                            await navigator.clipboard.writeText(url);
+                          } catch (e) {
+                            // fallback
+                            const tmp = document.createElement('input');
+                            tmp.value = url;
+                            document.body.appendChild(tmp);
+                            tmp.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(tmp);
+                          }
+                          window.history.replaceState(null, '', `#verse-${globalVerseNumber}`);
+                          setCopiedVerse(globalVerseNumber);
+                          setTimeout(() => setCopiedVerse(null), 2000);
+                        }}
+                        className="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 transition"
+                        aria-label={`Copy link to verse ${globalVerseNumber}`}
+                      >
+                        🔗
+                      </button>
+                      {copiedVerse === globalVerseNumber && (
+                        <span className="text-sm text-green-500">!Copied</span>
+                      )}
+                    </div>
                 <p
                   className={`text-left mt-2 ${
                     isDarkTheme ? 'text-gray-300' : 'text-gray-700'

@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useContext, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../ThemeContext';
 
 const Navbar = () => {
@@ -22,6 +22,8 @@ const Navbar = () => {
           </div>
           {/* Menu */}
           <div className="flex items-center space-x-4">
+            {/* Search form */}
+            <SearchBox />
             <NavLink to="/" label="Home" active={isActive('/')} />
             <NavLink to="/surah" label="Surat" active={isActive('/surah')} />
             <NavLink to="/bookmarks" label="Bookmarks" active={isActive('/bookmarks')} />
@@ -36,6 +38,34 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
+  );
+};
+
+const SearchBox = () => {
+  const [term, setTerm] = useState('');
+  const navigate = useNavigate();
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (term.trim()) {
+      navigate(`/search?query=${encodeURIComponent(term.trim())}`);
+      setTerm('');
+    }
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="hidden sm:flex items-center">
+      <input
+        type="text"
+        value={term}
+        onChange={(e) => setTerm(e.target.value)}
+        placeholder="Cari ayat atau kata..."
+        className="px-3 py-2 rounded-l-md border border-gray-300 focus:outline-none w-48"
+      />
+      <button type="submit" className="px-3 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600">
+        Cari
+      </button>
+    </form>
   );
 };
 
