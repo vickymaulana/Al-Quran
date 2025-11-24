@@ -52,5 +52,3 @@ Open `http://localhost:3000`.
 
 **License**
 - This project does not include a license file. Add one if you intend to publish.
-
-If you want, I can continue by modernizing other components (`Home.js`, `Surah.js`, search, bookmarks page), add ESLint/Prettier configs, or migrate the project to TypeScript.
