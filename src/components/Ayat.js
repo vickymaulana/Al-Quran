@@ -26,6 +26,7 @@ function Ayat() {
     }
   });
   const timeoutsRef = useRef([]);
+  const handledHashRef = useRef(null);
 
   const navigateToNextChapter = () => {
     navigate(`/ayat/${nextChapter}`);
@@ -59,6 +60,8 @@ function Ayat() {
 
     const hash = location.hash || window.location.hash;
     if (!hash) return;
+    // Only handle a given hash once (avoid forcing pagination when user navigates pages)
+    if (handledHashRef.current === hash) return;
 
     const match = hash.match(/#?verse-(\d+)/i);
     if (!match) return;
@@ -67,27 +70,39 @@ function Ayat() {
     if (!verseNumber || verseNumber <= 0) return;
 
     const targetPage = Math.ceil(verseNumber / versesPerPage);
-    if (targetPage !== currentPage) {
-      setCurrentPage(targetPage);
-      // wait for render/pagination to update
-      setTimeout(() => {
-        const el = document.getElementById(`verse-${verseNumber}`);
+
+    // helper that keeps trying to find the element until it's rendered
+    const scrollToVerse = (vNum) => {
+      let attempts = 0;
+      const maxAttempts = 15;
+      const tryFind = () => {
+        // ensure still on same route
+        if (!location.pathname || !location.pathname.includes(`/ayat/${chapter_number}`)) return;
+        const el = document.getElementById(`verse-${vNum}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setHighlighted(verseNumber);
-          setTimeout(() => setHighlighted(null), 4000);
+          setHighlighted(vNum);
+          const t = setTimeout(() => setHighlighted(null), 4000);
+          timeoutsRef.current.push(t);
+        } else if (attempts < maxAttempts) {
+          attempts += 1;
+          setTimeout(tryFind, 100);
         }
-      }, 250);
+      };
+      tryFind();
+    };
+
+    // mark hash as handled immediately so subsequent page changes won't re-trigger it
+    handledHashRef.current = hash;
+    if (targetPage !== currentPage) {
+      setCurrentPage(targetPage);
+      // start polling for the element; it will wait until DOM renders the new page
+      scrollToVerse(verseNumber);
     } else {
-      const el = document.getElementById(`verse-${verseNumber}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setHighlighted(verseNumber);
-        setTimeout(() => setHighlighted(null), 4000);
-      }
+      scrollToVerse(verseNumber);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.hash, data, currentPage]);
+  // include pathname so we bail if user navigated away
+  }, [location.pathname, location.hash, data, currentPage, chapter_number]);
 
   // cleanup timeouts on unmount
   useEffect(() => {
