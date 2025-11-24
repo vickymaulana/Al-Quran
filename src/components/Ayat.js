@@ -145,9 +145,9 @@ function Ayat() {
                 variants={verseContainerVariants}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
               >
-                <h2 className="text-2xl font-bold text-right mb-4">
+                    <h2 className="text-lg sm:text-2xl font-bold text-right mb-4">
                       {`${globalVerseNumber}. ${verse.text_uthmani}`}
-                </h2>
+                    </h2>
                     <div className="flex justify-end items-center gap-2 mt-2">
                       <button
                         onClick={async () => {
@@ -186,9 +186,7 @@ function Ayat() {
                       )}
                     </div>
                 <p
-                  className={`text-left mt-2 ${
-                    isDarkTheme ? 'text-gray-300' : 'text-gray-700'
-                  }`}
+                  className={`text-left mt-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'} text-sm sm:text-base`}
                   style={{ direction: 'ltr' }}
                 >
                   {translations?.[translationIndex]?.translation}

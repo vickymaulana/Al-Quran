@@ -69,32 +69,39 @@ function Home() {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
-              const { latitude, longitude } = position.coords;
+              try {
+                const { latitude, longitude } = position.coords;
 
-              const response = await axios.get(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-              );
-              const userCity =
-                response.data.address.city ||
-                response.data.address.town ||
-                response.data.address.village;
-              setCity(userCity);
+                const response = await axios.get(
+                  `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+                );
+                const userCity =
+                  response?.data?.address?.city ||
+                  response?.data?.address?.town ||
+                  response?.data?.address?.village || '';
+                setCity(userCity);
 
-              const times = await getPrayerTimesByCoordinates(userCity, month, year);
+                const times = await getPrayerTimesByCoordinates(userCity, month, year);
 
-              const todayTimes = times.find(
-                (time) => new Date(time.tanggal).getDate() === currentTime.getDate()
-              );
-              if (todayTimes) {
-                setPrayerTimes({
-                  Fajr: todayTimes.shubuh,
-                  Dhuhr: todayTimes.dzuhur,
-                  Asr: todayTimes.ashr,
-                  Maghrib: todayTimes.magrib,
-                  Isha: todayTimes.isya,
-                });
-              } else {
-                setError('Waktu sholat tidak ditemukan untuk tanggal ini.');
+                const todayTimes = times.find(
+                  (time) => new Date(time.tanggal).getDate() === currentTime.getDate()
+                );
+                if (todayTimes) {
+                  setPrayerTimes({
+                    Fajr: todayTimes.shubuh,
+                    Dhuhr: todayTimes.dzuhur,
+                    Asr: todayTimes.ashr,
+                    Maghrib: todayTimes.magrib,
+                    Isha: todayTimes.isya,
+                  });
+                } else {
+                  setError('Waktu sholat tidak ditemukan untuk tanggal ini.');
+                }
+              } catch (err) {
+                // handle network or parsing errors gracefully
+                // eslint-disable-next-line no-console
+                console.error('Error during geolocation network requests:', err);
+                setError('Tidak dapat mengambil data lokasi atau waktu sholat. Coba lagi nanti.');
               }
             },
             (error) => {

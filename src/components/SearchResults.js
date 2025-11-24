@@ -149,8 +149,8 @@ const SearchResults = () => {
 
   return (
     <div className={`min-h-screen py-8 ${isDarkTheme ? 'bg-gray-900 text-gray-100' : 'bg-blue-50 text-gray-900'}`}>
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold mb-6">Hasil Pencarian untuk: "{q}"</h1>
+      <div className="max-w-3xl mx-auto px-4">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6">Hasil Pencarian untuk: "{q}"</h1>
 
         {loading && <p>Memuat hasil...</p>}
         {error && <p className="text-red-400">{error}</p>}
@@ -162,7 +162,7 @@ const SearchResults = () => {
         <div className="space-y-4">
           {results.map((r, idx) => (
             <div key={`${r.verse_key || idx}`} className={`p-4 rounded-lg shadow-md ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`} style={{direction: 'rtl'}}>
-              <h2 className="text-xl font-bold text-right mb-2">{r.text_uthmani}</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-right mb-2">{r.text_uthmani}</h2>
               {r.translation && (
                 <p className="text-left mt-2 italic text-gray-700 dark:text-gray-300" style={{ direction: 'ltr' }}>
                   {r.translation}
@@ -170,7 +170,7 @@ const SearchResults = () => {
               )}
               <p className="text-left mt-2">Surat: {r.chapter_name || r.chapter_id} — Ayat: {r.verse_number}</p>
               <div className="mt-3">
-                <Link to={`/ayat/${r.chapter_id}#verse-${r.verse_number}`} className="text-blue-500 hover:underline">Buka surat ini</Link>
+                <Link to={`/ayat/${r.chapter_id}#verse-${r.verse_number}`} className="text-blue-500 hover:underline inline-block">Buka surat ini</Link>
               </div>
             </div>
           ))}
