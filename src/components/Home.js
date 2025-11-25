@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import 'tailwindcss/tailwind.css';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { fetchChapters } from './apiService';
+import { fetchChapters, fetchVerses, fetchTranslations } from './apiService';
 import { getPrayerTimesByCoordinates } from './prayerTimeService';
 import { hadiths, duas } from './dailyContent';
 import { ThemeContext } from '../ThemeContext';
@@ -12,7 +12,9 @@ import { FiClock, FiBook, FiSunrise, FiCompass, FiStar } from 'react-icons/fi';
 function Home() {
   const { isDarkTheme } = useContext(ThemeContext);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [dailyVerse, setDailyVerse] = useState('');
+  const [dailyVerse, setDailyVerse] = useState(null);
+  const [dailyVerseText, setDailyVerseText] = useState('');
+  const [dailyVerseTranslation, setDailyVerseTranslation] = useState('');
   const [dailyHadith, setDailyHadith] = useState('');
   const [dailyDua, setDailyDua] = useState('');
   const [chapters, setChapters] = useState([]);
@@ -39,11 +41,13 @@ function Home() {
         const chaptersResponse = await fetchChapters();
         setChapters(chaptersResponse.data.chapters);
 
-        const storedDate = localStorage.getItem('dailyContentDate');
+          const storedDate = localStorage.getItem('dailyContentDate');
         if (storedDate === currentDate) {
-          setDailyVerse(localStorage.getItem('dailyVerse'));
+          setDailyVerse(JSON.parse(localStorage.getItem('dailyVerse')));
           setDailyHadith(localStorage.getItem('dailyHadith'));
           setDailyDua(localStorage.getItem('dailyDua'));
+          setDailyVerseText(localStorage.getItem('dailyVerseText') || '');
+          setDailyVerseTranslation(localStorage.getItem('dailyVerseTranslation') || '');
         } else {
           const randomChapter =
             chaptersResponse.data.chapters[
@@ -51,9 +55,14 @@ function Home() {
             ];
           const randomVerseNumber =
             Math.floor(Math.random() * randomChapter.verses_count) + 1;
-          const newDailyVerse = `Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`;
+          const newDailyVerse = {
+            chapterName: randomChapter.name_simple,
+            chapterId: randomChapter.id,
+            verseNumber: randomVerseNumber,
+            text: `Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`
+          };
           setDailyVerse(newDailyVerse);
-          localStorage.setItem('dailyVerse', newDailyVerse);
+          localStorage.setItem('dailyVerse', JSON.stringify(newDailyVerse));
 
           const randomHadith = hadiths[Math.floor(Math.random() * hadiths.length)];
           setDailyHadith(randomHadith);
@@ -116,14 +125,53 @@ function Home() {
         console.error('Error fetching data:', err);
         setError('Terjadi kesalahan saat mengambil data.');
       }
-
-      if (prayerTimes) {
-        setNextPrayer(calculateNextPrayer(prayerTimes));
-      }
     };
 
     fetchData();
   }, [month, year, currentTime, currentDate]);
+
+  useEffect(() => {
+    const fetchVerseText = async () => {
+      if (!dailyVerse) return;
+      try {
+        const versesResponse = await fetchVerses(dailyVerse.chapterId);
+        const verse = versesResponse.data.verses.find(v => v.verse_number === dailyVerse.verseNumber);
+        if (verse) {
+          setDailyVerseText(verse.text_uthmani);
+          localStorage.setItem('dailyVerseText', verse.text_uthmani);
+        }
+
+        const translationsResponse = await fetchTranslations(dailyVerse.chapterId);
+        // translations may be in different shapes: { result: [...] } or [...] or { data: ... }
+        const trArr = translationsResponse?.data?.result || translationsResponse?.data || translationsResponse || [];
+
+        const getTranslationText = (arr, verseNumber) => {
+          if (!arr) return null;
+          // If it's an object with numeric keys, try to normalize to array
+          if (!Array.isArray(arr) && typeof arr === 'object') {
+            // try to find values
+            arr = Object.values(arr);
+          }
+          const idx = Number(verseNumber) - 1;
+          if (Array.isArray(arr) && arr.length > 0) {
+            if (arr[idx]) return arr[idx].translation || arr[idx].text || arr[idx].translation_text || arr[idx].result || null;
+            const found = arr.find((t) => String(t.verse_number) === String(verseNumber) || String(t.verse) === String(verseNumber) || String(t.verse_num) === String(verseNumber));
+            if (found) return found.translation || found.text || found.translation_text || null;
+          }
+          return null;
+        };
+
+        const trText = getTranslationText(trArr, dailyVerse.verseNumber);
+        if (trText) {
+          setDailyVerseTranslation(trText);
+          localStorage.setItem('dailyVerseTranslation', trText);
+        }
+      } catch (err) {
+        console.error('Error fetching verse text:', err);
+      }
+    };
+    fetchVerseText();
+  }, [dailyVerse]);
 
   const formatDate = (date) => {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -218,20 +266,45 @@ function Home() {
                 <FiBook className="text-3xl text-blue-500" />
               </div>
               <h2 className="text-2xl font-bold">Ayat Pilihan Hari Ini</h2>
+              <button
+                onClick={() => {
+                  const randomChapter = chapters[Math.floor(Math.random() * chapters.length)];
+                  const randomVerseNumber = Math.floor(Math.random() * randomChapter.verses_count) + 1;
+                  const newDailyVerse = {
+                    chapterName: randomChapter.name_simple,
+                    chapterId: randomChapter.id,
+                    verseNumber: randomVerseNumber,
+                    text: `Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`
+                  };
+                  setDailyVerse(newDailyVerse);
+                  localStorage.setItem('dailyVerse', JSON.stringify(newDailyVerse));
+                }}
+                className={`ml-auto px-4 py-2 rounded-lg ${
+                  isDarkTheme ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+                } text-white transition-colors`}
+              >
+                Refresh
+              </button>
             </div>
             <p className={`text-2xl leading-relaxed mb-4 text-right font-amiri ${
               isDarkTheme ? 'text-white' : 'text-black'
             }`}>
-              ﴾وَٱذۡكُر رَّبَّكَ فِی نَفۡسِكَ تَضَرُّعࣰا وَخِیفَةࣰ وَدُونَ ٱلۡجَهۡرِ مِنَ ٱلۡقَوۡلِ بِٱلۡغُدُوِّ وَٱلۡـَٔاصَالِ وَلَا تَكُن مِّنَ ٱلۡغَـٰفِلِینَ﴿
+              {dailyVerseText || (dailyVerse ? dailyVerse.text : 'Memuat ayat...')}
             </p>
             <p className={`text-lg ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
-              "Dan sebutlah Tuhanmu dalam hatimu dengan merendahkan diri dan rasa takut, 
-              dan dengan tidak mengeraskan suara, pada waktu pagi dan petang, 
-              dan janganlah kamu termasuk orang-orang yang lalai."
+              {dailyVerseTranslation || '"Dan sebutlah Tuhanmu dalam hatimu dengan merendahkan diri dan rasa takut, dan dengan tidak mengeraskan suara, pada waktu pagi dan petang, dan janganlah kamu termasuk orang-orang yang lalai."'}
             </p>
             <p className="mt-4 text-lg font-medium text-blue-500">
-              Al-A'raf 7:205
+              {dailyVerse ? `${dailyVerse.chapterName} ${dailyVerse.verseNumber}` : 'Al-A\'raf 7:205'}
             </p>
+            {dailyVerse && (
+              <Link
+                to={`/ayat/${dailyVerse.chapterId}#verse-${dailyVerse.verseNumber}`}
+                className="mt-2 inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Baca Ayat Lengkap
+              </Link>
+            )}
           </motion.div>
 
           {/* Waktu Shalat */}
@@ -315,10 +388,21 @@ function Home() {
           >
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <FiStar className="text-amber-500" /> Hadits Hari Ini
+              <button
+                onClick={() => {
+                  const randomHadith = hadiths[Math.floor(Math.random() * hadiths.length)];
+                  setDailyHadith(randomHadith);
+                  localStorage.setItem('dailyHadith', randomHadith);
+                }}
+                className={`ml-auto px-3 py-1 text-sm rounded-lg ${
+                  isDarkTheme ? 'bg-amber-600 hover:bg-amber-700' : 'bg-amber-500 hover:bg-amber-600'
+                } text-white transition-colors`}
+              >
+                Refresh
+              </button>
             </h3>
             <p className="text-lg leading-relaxed">
-              "Barangsiapa yang menempuh suatu jalan untuk mencari ilmu, 
-              maka Allah akan memudahkan baginya jalan ke surga."
+              {dailyHadith ? dailyHadith : 'Memuat hadits...'}
             </p>
             <p className="mt-4 text-gray-500">HR. Muslim</p>
           </motion.div>
@@ -331,13 +415,20 @@ function Home() {
           >
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <FiStar className="text-green-500" /> Doa Harian
+              <button
+                onClick={() => {
+                  const randomDua = duas[Math.floor(Math.random() * duas.length)];
+                  setDailyDua(randomDua);
+                  localStorage.setItem('dailyDua', randomDua);
+                }}
+                className={`ml-auto px-3 py-1 text-sm rounded-lg ${
+                  isDarkTheme ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
+                } text-white transition-colors`}
+              >
+                Refresh
+              </button>
             </h3>
-            <p className={`text-2xl leading-relaxed text-right font-amiri ${
-              isDarkTheme ? 'text-white' : 'text-black'
-            }`}>
-              رَبِّ زِدْنِي عِلْمًا
-            </p>
-            <p className="text-lg mt-2">"Ya Rabb-ku, tambahkanlah ilmu kepadaku"</p>
+            <p className="text-lg mt-2">{dailyDua ? dailyDua : 'Memuat doa...'}</p>
             <p className="mt-4 text-gray-500">QS. Ta Ha 20:114</p>
           </motion.div>
         </div>
