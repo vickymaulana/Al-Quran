@@ -22,6 +22,7 @@ function Home() {
   const [city, setCity] = useState('');
   const [error, setError] = useState(null);
   const [nextPrayer, setNextPrayer] = useState(null);
+  const [lastRead, setLastRead] = useState(null);
 
   const month = (currentTime.getMonth() + 1).toString().padStart(2, '0');
   const year = currentTime.getFullYear();
@@ -33,6 +34,24 @@ function Home() {
     }, 1000);
 
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    // load last-read on mount and listen for cross-tab updates
+    try {
+      const lr = localStorage.getItem('lastRead');
+      if (lr) setLastRead(JSON.parse(lr));
+    } catch (e) {}
+
+    const onStorage = (e) => {
+      if (e.key === 'lastRead') {
+        try {
+          setLastRead(e.newValue ? JSON.parse(e.newValue) : null);
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   useEffect(() => {
@@ -249,6 +268,32 @@ function Home() {
             </div>
           </div>
         </motion.header>
+
+        {/* Lanjutkan Membaca */}
+        {lastRead && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-10 rounded-2xl p-6 flex items-center justify-between shadow-lg ${
+              isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
+            }`}
+          >
+            <div>
+              <p className="text-sm text-gray-500">Lanjutkan Membaca</p>
+              <h3 className="text-xl font-semibold mt-1">
+                {lastRead.surahName} • Ayat {lastRead.verseNumber}
+              </h3>
+            </div>
+            <Link
+              to={`/ayat/${lastRead.chapterNumber}#verse-${lastRead.verseNumber}`}
+              className={`px-4 py-2 rounded-lg ${
+                isDarkTheme ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+              } text-white transition-colors`}
+            >
+              Lanjutkan
+            </Link>
+          </motion.div>
+        )}
 
         {/* Grid Konten Utama */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">

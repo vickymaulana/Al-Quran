@@ -116,6 +116,22 @@ function Ayat() {
   const indexOfFirstVerse = indexOfLastVerse - versesPerPage;
   const currentVerses = data?.slice(indexOfFirstVerse, indexOfLastVerse) || [];
 
+  // Persist last read on page/surah changes (resume at first verse on the page)
+  useEffect(() => {
+    if (!surahName || !chapter_number) return;
+    try {
+      const payload = {
+        chapterNumber: Number(chapter_number),
+        verseNumber: indexOfFirstVerse + 1,
+        surahName,
+        updatedAt: Date.now(),
+      };
+      localStorage.setItem('lastRead', JSON.stringify(payload));
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [chapter_number, currentPage, surahName, indexOfFirstVerse]);
+
   const toggleBookmark = (verseNumber, verseText, translation) => {
     const key = `${chapter_number}:${verseNumber}`;
     setBookmarks((prev) => {
@@ -159,6 +175,18 @@ function Ayat() {
                 animate="visible"
                 variants={verseContainerVariants}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
+                onMouseEnter={() => {
+                  // lightweight update of last read when user hovers over a verse
+                  try {
+                    const payload = {
+                      chapterNumber: Number(chapter_number),
+                      verseNumber: globalVerseNumber,
+                      surahName,
+                      updatedAt: Date.now(),
+                    };
+                    localStorage.setItem('lastRead', JSON.stringify(payload));
+                  } catch (e) {}
+                }}
               >
                     <h2 className="text-lg sm:text-2xl font-bold text-right mb-4">
                       {`${globalVerseNumber}. ${verse.text_uthmani}`}
@@ -190,11 +218,60 @@ function Ayat() {
                           setCopiedVerse(globalVerseNumber);
                           const t = setTimeout(() => setCopiedVerse(null), 2000);
                           timeoutsRef.current.push(t);
+
+                          // also persist as last read when user copies link
+                          try {
+                            const payload = {
+                              chapterNumber: Number(chapter_number),
+                              verseNumber: globalVerseNumber,
+                              surahName,
+                              updatedAt: Date.now(),
+                            };
+                            localStorage.setItem('lastRead', JSON.stringify(payload));
+                          } catch (e) {}
                         }}
                         className="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 transition"
                         aria-label={`Copy link to verse ${globalVerseNumber}`}
                       >
                         🔗
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const shareUrl = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
+                          const shareText = `${surahName} • Ayat ${globalVerseNumber}\n\n${verse.text_uthmani}\n\n${translations?.[translationIndex]?.translation || ''}`.trim();
+                          if (navigator.share) {
+                            try {
+                              await navigator.share({ title: `${surahName} ${globalVerseNumber}`, text: shareText, url: shareUrl });
+                            } catch (e) {
+                              // user may cancel share; ignore
+                            }
+                          } else {
+                            try {
+                              await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+                            } catch (e) {
+                              const tmp = document.createElement('textarea');
+                              tmp.value = `${shareText}\n${shareUrl}`;
+                              document.body.appendChild(tmp);
+                              tmp.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(tmp);
+                            }
+                          }
+
+                          try {
+                            const payload = {
+                              chapterNumber: Number(chapter_number),
+                              verseNumber: globalVerseNumber,
+                              surahName,
+                              updatedAt: Date.now(),
+                            };
+                            localStorage.setItem('lastRead', JSON.stringify(payload));
+                          } catch (e) {}
+                        }}
+                        className="text-sm px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
+                        aria-label={`Share verse ${globalVerseNumber}`}
+                      >
+                        Share
                       </button>
                       {copiedVerse === globalVerseNumber && (
                         <span className="text-sm text-green-500">!Copied</span>
