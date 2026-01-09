@@ -19,11 +19,11 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white dark:bg-gray-900 shadow-lg">
+    <nav className={`${isDarkTheme ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-800'} shadow-lg`}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center py-3 md:py-4">
           <div className="flex items-center gap-3">
-            <Link to="/" className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">
+            <Link to="/" className={`text-xl md:text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-gray-800'}`}>
               Al-Quran App
             </Link>
           </div>
@@ -36,7 +36,7 @@ const Navbar = () => {
             <NavLink to="/bookmarks" label="Bookmarks" active={isActive('/bookmarks')} />
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-300"
+              className={`p-2 rounded-full ${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'} transition duration-300`}
               aria-label="Toggle theme"
             >
               {isDarkTheme ? '☀️' : '🌙'}
@@ -47,7 +47,7 @@ const Navbar = () => {
           <div className="md:hidden flex items-center gap-2">
             <button
               onClick={() => setMobileSearchOpen((s) => !s)}
-              className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+              className={`p-2 rounded-md ${isDarkTheme ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-700'}`}
               aria-expanded={mobileSearchOpen}
               aria-label="Open search"
             >
@@ -55,7 +55,7 @@ const Navbar = () => {
             </button>
             <button
               onClick={() => setMobileOpen((s) => !s)}
-              className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+              className={`p-2 rounded-md ${isDarkTheme ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-700'}`}
               aria-expanded={mobileOpen}
               aria-label="Open menu"
             >
@@ -81,7 +81,7 @@ const Navbar = () => {
             <MobileNavLink to="/bookmarks" label="Bookmarks" active={isActive('/bookmarks')} onClick={() => setMobileOpen(false)} />
             <button
               onClick={() => { toggleTheme(); setMobileOpen(false); }}
-              className="text-left py-2 px-3 rounded-md bg-gray-100 dark:bg-gray-800"
+              className={`text-left py-2 px-3 rounded-md ${isDarkTheme ? 'bg-gray-800' : 'bg-gray-100'}`}
             >
               {isDarkTheme ? '☀️ Light' : '🌙 Dark'}
             </button>
@@ -111,7 +111,7 @@ const SearchBox = ({ onSearch }) => {
         value={term}
         onChange={(e) => setTerm(e.target.value)}
         placeholder="Cari ayat atau kata..."
-        className="px-3 py-2 rounded-l-md border border-gray-300 focus:outline-none w-56"
+        className="px-3 py-2 rounded-l-md border w-56 focus:outline-none bg-white text-gray-900 placeholder-gray-500 border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 dark:border-gray-600"
         aria-label="Search"
       />
       <button type="submit" className="px-3 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600">
@@ -134,7 +134,7 @@ const MobileSearchBox = ({ onSearch }) => {
         value={term}
         onChange={(e) => setTerm(e.target.value)}
         placeholder="Cari ayat atau kata..."
-        className="flex-1 px-3 py-2 rounded-l-md border border-gray-300 focus:outline-none"
+        className="flex-1 px-3 py-2 rounded-l-md border focus:outline-none bg-white text-gray-900 placeholder-gray-500 border-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 dark:border-gray-600"
         aria-label="Mobile search"
       />
       <button type="submit" className="px-3 py-2 bg-blue-500 text-white rounded-r-md">Cari</button>
@@ -143,8 +143,9 @@ const MobileSearchBox = ({ onSearch }) => {
 };
 
 const NavLink = ({ to, label, active }) => {
+  const { isDarkTheme } = useContext(ThemeContext);
   const activeClassName = 'py-2 px-4 text-blue-500 border-b-2 border-blue-500 font-medium';
-  const inactiveClassName = 'py-2 px-4 text-gray-700 dark:text-gray-300 hover:text-blue-500 transition duration-200';
+  const inactiveClassName = `py-2 px-4 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'} hover:text-blue-500 transition duration-200`;
 
   return (
     <Link to={to} className={active ? activeClassName : inactiveClassName}>
@@ -153,10 +154,13 @@ const NavLink = ({ to, label, active }) => {
   );
 };
 
-const MobileNavLink = ({ to, label, active, onClick }) => (
-  <Link to={to} onClick={onClick} className={`py-2 px-3 rounded-md ${active ? 'bg-blue-50 dark:bg-gray-800' : 'bg-transparent'}`}>
-    {label}
-  </Link>
-);
+const MobileNavLink = ({ to, label, active, onClick }) => {
+  const { isDarkTheme } = useContext(ThemeContext);
+  return (
+    <Link to={to} onClick={onClick} className={`py-2 px-3 rounded-md ${active ? (isDarkTheme ? 'bg-gray-800' : 'bg-blue-50') : 'bg-transparent'}`}>
+      {label}
+    </Link>
+  );
+};
 
 export default Navbar;

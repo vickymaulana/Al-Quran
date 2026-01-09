@@ -5,12 +5,12 @@ const Footer = () => {
   const { isDarkTheme } = useContext(ThemeContext);
 
   return (
-    <footer className="bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-400 py-8">
+    <footer className={`${isDarkTheme ? 'bg-gray-900 text-gray-400' : 'bg-gray-100 text-gray-700'} py-8`}>
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
           {/* Kolom Pertama */}
           <div className="flex flex-col items-center sm:items-start">
-            <a href="/" className="text-gray-800 dark:text-white text-2xl font-bold mb-2">
+            <a href="/" className={`${isDarkTheme ? 'text-white' : 'text-gray-800'} text-2xl font-bold mb-2`}>
               MAB
             </a>
             <p className="text-center sm:text-left">
@@ -19,7 +19,7 @@ const Footer = () => {
           </div>
           {/* Kolom Kedua */}
           <div className="flex flex-col items-center sm:items-start">
-            <h3 className="text-gray-800 dark:text-white text-lg font-semibold mb-2">Link:</h3>
+            <h3 className={`${isDarkTheme ? 'text-white' : 'text-gray-800'} text-lg font-semibold mb-2`}>Link:</h3>
             <ul className="space-y-1">
               <li>
                 <a
@@ -41,7 +41,7 @@ const Footer = () => {
           </div>
           {/* Kolom Ketiga */}
           <div className="flex flex-col items-center sm:items-start">
-            <h3 className="text-gray-800 dark:text-white text-lg font-semibold mb-2">
+            <h3 className={`${isDarkTheme ? 'text-white' : 'text-gray-800'} text-lg font-semibold mb-2`}>
               Kontak Kami
             </h3>
             <ul className="space-y-1">
@@ -66,7 +66,7 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-        <div className="border-t border-gray-300 dark:border-gray-700 mt-8 pt-4">
+        <div className={`border-t ${isDarkTheme ? 'border-gray-700' : 'border-gray-300'} mt-8 pt-4`}>
           <div className="flex flex-col sm:flex-row justify-between items-center">
             <span className="text-sm">&copy; 2023 MAB. All rights reserved.</span>
           </div>

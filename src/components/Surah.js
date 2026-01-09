@@ -1,30 +1,34 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useFetchData } from './useFetchData';
 import { ThemeContext } from '../ThemeContext';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 function Surah() {
   const { isDarkTheme } = useContext(ThemeContext);
   const [searchQuery, setSearchQuery] = useState('');
   const { data } = useFetchData('chapters');
+  const debouncedQuery = useDebouncedValue(searchQuery, 200);
 
   const handleSearch = (event) => {
     setSearchQuery(event.target.value);
   };
 
-  const filteredData = data
-    ? data.filter((surah) => {
-        const surahName = surah.name_simple.toLowerCase();
-        const translatedName = surah.translated_name.name.toLowerCase();
-        const surahId = surah.id.toString();
-        const query = searchQuery.toLowerCase();
-        return (
-          surahName.includes(query) ||
-          translatedName.includes(query) ||
-          surahId.includes(query)
-        );
-      })
-    : [];
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    const query = debouncedQuery.trim().toLowerCase();
+    if (!query) return data;
+    return data.filter((surah) => {
+      const surahName = surah.name_simple.toLowerCase();
+      const translatedName = surah.translated_name.name.toLowerCase();
+      const surahId = surah.id.toString();
+      return (
+        surahName.includes(query) ||
+        translatedName.includes(query) ||
+        surahId.includes(query)
+      );
+    });
+  }, [data, debouncedQuery]);
 
   return (
     <div

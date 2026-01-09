@@ -5,6 +5,9 @@ import { useFetchData } from './useFetchData';
 import { fetchSurahName } from './apiService';
 import { ThemeContext } from '../ThemeContext';
 import { FiBookmark } from 'react-icons/fi';
+import { getJSON, setJSON } from '../utils/storage';
+import { copyText, sharePayload } from '../utils/clipboard';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 function Ayat() {
   const { isDarkTheme } = useContext(ThemeContext);
@@ -14,19 +17,22 @@ function Ayat() {
   const nextChapter = parseInt(chapter_number, 10) + 1;
   const [nextSurahName, setNextSurahName] = useState('');
   const navigate = useNavigate();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedVerse, setCopiedVerse] = useState(null);
-  const [bookmarks, setBookmarks] = useState(() => {
-    try {
-      const stored = localStorage.getItem('bookmarkedVerses');
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const [bookmarks, setBookmarks] = useState(() => getJSON('bookmarkedVerses', []));
   const timeoutsRef = useRef([]);
   const handledHashRef = useRef(null);
+  const [fontScale, setFontScale] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fontScale');
+      const v = saved ? parseFloat(saved) : 1;
+      return Number.isFinite(v) ? Math.min(1.6, Math.max(0.8, v)) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
 
   const navigateToNextChapter = () => {
     navigate(`/ayat/${nextChapter}`);
@@ -50,6 +56,12 @@ function Ayat() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentPage]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('fontScale', String(fontScale));
+    } catch (e) {}
+  }, [fontScale]);
 
   // If navigated with a hash (e.g. #verse-10), scroll to that verse and set page.
   const location = useLocation();
@@ -119,17 +131,12 @@ function Ayat() {
   // Persist last read on page/surah changes (resume at first verse on the page)
   useEffect(() => {
     if (!surahName || !chapter_number) return;
-    try {
-      const payload = {
-        chapterNumber: Number(chapter_number),
-        verseNumber: indexOfFirstVerse + 1,
-        surahName,
-        updatedAt: Date.now(),
-      };
-      localStorage.setItem('lastRead', JSON.stringify(payload));
-    } catch (e) {
-      // ignore storage errors
-    }
+    setJSON('lastRead', {
+      chapterNumber: Number(chapter_number),
+      verseNumber: indexOfFirstVerse + 1,
+      surahName,
+      updatedAt: Date.now(),
+    });
   }, [chapter_number, currentPage, surahName, indexOfFirstVerse]);
 
   const toggleBookmark = (verseNumber, verseText, translation) => {
@@ -142,24 +149,19 @@ function Ayat() {
             ...prev,
             { key, surahName, verseNumber, text: verseText, translation },
           ];
-      try {
-        localStorage.setItem('bookmarkedVerses', JSON.stringify(updated));
-      } catch (e) {
-        // ignore storage errors
-      }
+      setJSON('bookmarkedVerses', updated);
       return updated;
     });
   };
 
-  const verseContainerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
+  const verseContainerVariants = prefersReducedMotion
+    ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
+    : { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
 
   const renderVerses = () => {
     if (currentVerses.length > 0) {
       return (
-        <div className="space-y-8">
+        <div className="space-y-8" style={{ fontSize: `${fontScale}em` }}>
           {currentVerses.map((verse, index) => {
             const translationIndex = index + indexOfFirstVerse;
             const globalVerseNumber = index + indexOfFirstVerse + 1;
@@ -177,15 +179,12 @@ function Ayat() {
                 transition={{ duration: 0.5, delay: index * 0.05 }}
                 onMouseEnter={() => {
                   // lightweight update of last read when user hovers over a verse
-                  try {
-                    const payload = {
-                      chapterNumber: Number(chapter_number),
-                      verseNumber: globalVerseNumber,
-                      surahName,
-                      updatedAt: Date.now(),
-                    };
-                    localStorage.setItem('lastRead', JSON.stringify(payload));
-                  } catch (e) {}
+                  setJSON('lastRead', {
+                    chapterNumber: Number(chapter_number),
+                    verseNumber: globalVerseNumber,
+                    surahName,
+                    updatedAt: Date.now(),
+                  });
                 }}
               >
                     <h2 className="text-lg sm:text-2xl font-bold text-right mb-4">
@@ -195,24 +194,7 @@ function Ayat() {
                       <button
                         onClick={async () => {
                           const url = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
-                          const copyText = async (text) => {
-                            try {
-                              await navigator.clipboard.writeText(text);
-                              return true;
-                            } catch (e) {
-                              return false;
-                            }
-                          };
-
-                          const ok = await copyText(url);
-                          if (!ok) {
-                            const tmp = document.createElement('input');
-                            tmp.value = url;
-                            document.body.appendChild(tmp);
-                            tmp.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(tmp);
-                          }
+                          await copyText(url);
 
                           window.history.replaceState(null, '', `#verse-${globalVerseNumber}`);
                           setCopiedVerse(globalVerseNumber);
@@ -220,15 +202,12 @@ function Ayat() {
                           timeoutsRef.current.push(t);
 
                           // also persist as last read when user copies link
-                          try {
-                            const payload = {
-                              chapterNumber: Number(chapter_number),
-                              verseNumber: globalVerseNumber,
-                              surahName,
-                              updatedAt: Date.now(),
-                            };
-                            localStorage.setItem('lastRead', JSON.stringify(payload));
-                          } catch (e) {}
+                          setJSON('lastRead', {
+                            chapterNumber: Number(chapter_number),
+                            verseNumber: globalVerseNumber,
+                            surahName,
+                            updatedAt: Date.now(),
+                          });
                         }}
                         className="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 transition"
                         aria-label={`Copy link to verse ${globalVerseNumber}`}
@@ -239,34 +218,14 @@ function Ayat() {
                         onClick={async () => {
                           const shareUrl = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
                           const shareText = `${surahName} • Ayat ${globalVerseNumber}\n\n${verse.text_uthmani}\n\n${translations?.[translationIndex]?.translation || ''}`.trim();
-                          if (navigator.share) {
-                            try {
-                              await navigator.share({ title: `${surahName} ${globalVerseNumber}`, text: shareText, url: shareUrl });
-                            } catch (e) {
-                              // user may cancel share; ignore
-                            }
-                          } else {
-                            try {
-                              await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-                            } catch (e) {
-                              const tmp = document.createElement('textarea');
-                              tmp.value = `${shareText}\n${shareUrl}`;
-                              document.body.appendChild(tmp);
-                              tmp.select();
-                              document.execCommand('copy');
-                              document.body.removeChild(tmp);
-                            }
-                          }
+                          await sharePayload({ title: `${surahName} ${globalVerseNumber}`, text: shareText, url: shareUrl });
 
-                          try {
-                            const payload = {
-                              chapterNumber: Number(chapter_number),
-                              verseNumber: globalVerseNumber,
-                              surahName,
-                              updatedAt: Date.now(),
-                            };
-                            localStorage.setItem('lastRead', JSON.stringify(payload));
-                          } catch (e) {}
+                          setJSON('lastRead', {
+                            chapterNumber: Number(chapter_number),
+                            verseNumber: globalVerseNumber,
+                            surahName,
+                            updatedAt: Date.now(),
+                          });
                         }}
                         className="text-sm px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
                         aria-label={`Share verse ${globalVerseNumber}`}
@@ -384,6 +343,30 @@ function Ayat() {
           <>
             {renderVerses()}
             {renderPagination()}
+            {/* Font size controls */}
+            <div className="fixed bottom-6 right-6 flex flex-col gap-2">
+              <button
+                onClick={() => setFontScale((s) => Math.max(0.8, Number((s - 0.1).toFixed(2))))}
+                className={`${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white text-gray-800 hover:bg-gray-100'} shadow-md rounded-full px-3 py-2`}
+                title="Kecilkan ukuran teks"
+              >
+                A-
+              </button>
+              <button
+                onClick={() => setFontScale(1)}
+                className={`${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white text-gray-800 hover:bg-gray-100'} shadow-md rounded-full px-3 py-2`}
+                title="Reset ukuran teks"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => setFontScale((s) => Math.min(1.6, Number((s + 0.1).toFixed(2))))}
+                className={`${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white text-gray-800 hover:bg-gray-100'} shadow-md rounded-full px-3 py-2`}
+                title="Perbesar ukuran teks"
+              >
+                A+
+              </button>
+            </div>
           </>
         )}
       </div>

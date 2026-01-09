@@ -8,6 +8,7 @@ import { getPrayerTimesByCoordinates } from './prayerTimeService';
 import { hadiths, duas } from './dailyContent';
 import { ThemeContext } from '../ThemeContext';
 import { FiClock, FiBook, FiSunrise, FiCompass, FiStar } from 'react-icons/fi';
+import { getJSON, setJSON, subscribeToStorageKey } from '../utils/storage';
 
 function Home() {
   const { isDarkTheme } = useContext(ThemeContext);
@@ -22,7 +23,7 @@ function Home() {
   const [city, setCity] = useState('');
   const [error, setError] = useState(null);
   const [nextPrayer, setNextPrayer] = useState(null);
-  const [lastRead, setLastRead] = useState(null);
+  const [lastRead, setLastRead] = useState(() => getJSON('lastRead', null));
 
   const month = (currentTime.getMonth() + 1).toString().padStart(2, '0');
   const year = currentTime.getFullYear();
@@ -37,21 +38,13 @@ function Home() {
   }, []);
 
   useEffect(() => {
-    // load last-read on mount and listen for cross-tab updates
-    try {
-      const lr = localStorage.getItem('lastRead');
-      if (lr) setLastRead(JSON.parse(lr));
-    } catch (e) {}
-
-    const onStorage = (e) => {
-      if (e.key === 'lastRead') {
-        try {
-          setLastRead(e.newValue ? JSON.parse(e.newValue) : null);
-        } catch (err) {}
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    // cross-tab updates for lastRead
+    const unsub = subscribeToStorageKey('lastRead', (newValue) => {
+      try {
+        setLastRead(newValue ? JSON.parse(newValue) : null);
+      } catch (e) {}
+    });
+    return unsub;
   }, []);
 
   useEffect(() => {

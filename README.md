@@ -16,6 +16,7 @@ This project, named Al-Quran ReactJS, is a modern web application developed usin
 - Search (uses API with fallback search if needed).
 - Dark/light theme support.
 - Resume reading (Last Read): the app remembers the last surah/ayah you viewed and shows a "Lanjutkan Membaca" card on Home.
+- Adjustable font size on the Ayat page (A-/Reset/A+), persisted across visits.
 
 **Quick Start**
 - Clone the repo and install dependencies:
@@ -44,6 +45,10 @@ Open `http://localhost:3000`.
 - Data hook `src/components/useFetchData.js` provides `{ data, translations, surahName, loading, error, refetch }` and uses `AbortController`.
 - Bookmarks persist in `localStorage` under the `bookmarkedVerses` key.
 - Last read progress persists in `localStorage` under the `lastRead` key with `{ chapterNumber, verseNumber, surahName, updatedAt }`.
+- Shared utilities:
+	- Storage helpers in `src/utils/storage.js` for safe JSON get/set and storage subscriptions.
+	- Clipboard helpers in `src/utils/clipboard.js` for copy/share with fallbacks.
+	- Hooks: `useDebouncedValue` for input debouncing and `usePrefersReducedMotion` to reduce animations when preferred by the user.
 
 **Development Notes & Recommendations**
 - The project uses Tailwind v2 compatibility build in `package.json`. Consider upgrading the Tailwind/PostCSS toolchain for newer features.

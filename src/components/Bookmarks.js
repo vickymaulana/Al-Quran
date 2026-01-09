@@ -1,5 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { ThemeContext } from '../ThemeContext';
+import { getJSON, setJSON } from '../utils/storage';
+import { copyText } from '../utils/clipboard';
 
 function Bookmarks() {
   const { isDarkTheme } = useContext(ThemeContext);
@@ -11,14 +13,7 @@ function Bookmarks() {
   const [selectedKeys, setSelectedKeys] = useState([]); // daftar key yang dipilih untuk bulk action
 
   useEffect(() => {
-    const stored = localStorage.getItem('bookmarkedVerses');
-    if (stored) {
-      try {
-        setBookmarks(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse bookmarkedVerses', e);
-      }
-    }
+    setBookmarks(getJSON('bookmarkedVerses', []));
   }, []);
 
   // Sinkronisasi antar tab jika localStorage berubah
@@ -26,11 +21,7 @@ function Bookmarks() {
     const onStorage = (e) => {
       if (e.key === 'bookmarkedVerses') {
         try {
-          if (e.newValue) {
-            setBookmarks(JSON.parse(e.newValue));
-          } else {
-            setBookmarks([]);
-          }
+          setBookmarks(e.newValue ? JSON.parse(e.newValue) : []);
         } catch (err) {
           console.error('Gagal sinkronisasi bookmarkedVerses', err);
         }
@@ -43,25 +34,13 @@ function Bookmarks() {
   const removeBookmark = (key) => {
     const updated = bookmarks.filter((b) => b.key !== key);
     setBookmarks(updated);
-    localStorage.setItem('bookmarkedVerses', JSON.stringify(updated));
+    setJSON('bookmarkedVerses', updated);
   };
 
-  const copyBookmark = (b) => {
+  const copyBookmark = async (b) => {
     const textToCopy = `${b.text}\n${b.translation}\n(${b.surahName} : ${b.verseNumber})${b.note ? `\nCatatan: ${b.note}` : ''}`;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(textToCopy).catch(() => {
-        try {
-          const textarea = document.createElement('textarea');
-          textarea.value = textToCopy;
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
-        } catch (e) {
-          console.error('Copy failed', e);
-        }
-      });
-    }
+    const ok = await copyText(textToCopy);
+    if (!ok) console.error('Copy failed');
   };
 
   const exportBookmarks = () => {
@@ -122,7 +101,7 @@ function Bookmarks() {
       if (!window.confirm(`Hapus ${selectedKeys.length} bookmark terpilih?`)) return;
       const updated = bookmarks.filter((b) => !selectedKeys.includes(b.key));
       setBookmarks(updated);
-      localStorage.setItem('bookmarkedVerses', JSON.stringify(updated));
+      setJSON('bookmarkedVerses', updated);
       clearSelection();
     };
   if (sortOption === 'surah') {
@@ -216,7 +195,7 @@ function Bookmarks() {
                 <p className="mb-2">{b.translation}</p>
                 <p className="text-sm mb-4">{b.surahName} : {b.verseNumber}</p>
                 {b.note && !openNoteKey ? (
-                  <div className="mb-4 text-sm border-l-4 pl-3 ${isDarkTheme ? 'border-indigo-400' : 'border-indigo-600'}">
+                  <div className={`mb-4 text-sm border-l-4 pl-3 ${isDarkTheme ? 'border-indigo-400' : 'border-indigo-600'}`}>
                     <p className="font-semibold mb-1">Catatan:</p>
                     <p className="whitespace-pre-line">{b.note}</p>
                   </div>

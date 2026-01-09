@@ -16,6 +16,18 @@ export const ThemeProvider = ({ children }) => {
     });
   };
 
+  // Ensure dark mode applies globally (html/body) and DaisyUI themes sync
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDarkTheme) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    // Sync with DaisyUI theme attribute as well
+    root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+  }, [isDarkTheme]);
+
   return (
     <ThemeContext.Provider value={{ isDarkTheme, toggleTheme }}>
       <div className={isDarkTheme ? 'dark' : ''}>{children}</div>
