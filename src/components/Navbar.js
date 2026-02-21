@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../ThemeContext';
+import { FiHome, FiBook, FiBookmark, FiBarChart2, FiCompass, FiSettings } from 'react-icons/fi';
 
 const Navbar = () => {
   const { isDarkTheme, toggleTheme } = useContext(ThemeContext);
@@ -18,25 +19,34 @@ const Navbar = () => {
     }
   };
 
+  const navItems = [
+    { to: '/', label: 'Home', icon: <FiHome /> },
+    { to: '/surah', label: 'Surat', icon: <FiBook /> },
+    { to: '/bookmarks', label: 'Bookmark', icon: <FiBookmark /> },
+    { to: '/tilawah', label: 'Tilawah', icon: <FiBarChart2 /> },
+    { to: '/qibla', label: 'Kiblat', icon: <FiCompass /> },
+    { to: '/settings', label: 'Setelan', icon: <FiSettings /> },
+  ];
+
   return (
-    <nav className={`${isDarkTheme ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-800'} shadow-lg`}>
+    <nav className={`${isDarkTheme ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-800'} shadow-lg sticky top-0 z-40`}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center py-3 md:py-4">
           <div className="flex items-center gap-3">
-            <Link to="/" className={`text-xl md:text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-gray-800'}`}>
+            <Link to="/" className={`text-xl md:text-2xl font-bold font-inter ${isDarkTheme ? 'text-white' : 'text-gray-800'}`}>
               Al-Quran App
             </Link>
           </div>
 
           {/* Desktop menu */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-1">
             <SearchBox onSearch={onSearch} />
-            <NavLink to="/" label="Home" active={isActive('/')} />
-            <NavLink to="/surah" label="Surat" active={isActive('/surah')} />
-            <NavLink to="/bookmarks" label="Bookmarks" active={isActive('/bookmarks')} />
+            {navItems.map(item => (
+              <NavLink key={item.to} to={item.to} label={item.label} active={isActive(item.to)} icon={item.icon} />
+            ))}
             <button
               onClick={toggleTheme}
-              className={`p-2 rounded-full ${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'} transition duration-300`}
+              className={`p-2 rounded-full ml-2 ${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'} transition duration-300`}
               aria-label="Toggle theme"
             >
               {isDarkTheme ? '☀️' : '🌙'}
@@ -75,13 +85,20 @@ const Navbar = () => {
       {/* Mobile menu drawer */}
       {mobileOpen && (
         <div className="md:hidden px-4 pb-4">
-          <div className="flex flex-col space-y-2">
-            <MobileNavLink to="/" label="Home" active={isActive('/')} onClick={() => setMobileOpen(false)} />
-            <MobileNavLink to="/surah" label="Surat" active={isActive('/surah')} onClick={() => setMobileOpen(false)} />
-            <MobileNavLink to="/bookmarks" label="Bookmarks" active={isActive('/bookmarks')} onClick={() => setMobileOpen(false)} />
+          <div className="flex flex-col space-y-1">
+            {navItems.map(item => (
+              <MobileNavLink
+                key={item.to}
+                to={item.to}
+                label={item.label}
+                icon={item.icon}
+                active={isActive(item.to)}
+                onClick={() => setMobileOpen(false)}
+              />
+            ))}
             <button
               onClick={() => { toggleTheme(); setMobileOpen(false); }}
-              className={`text-left py-2 px-3 rounded-md ${isDarkTheme ? 'bg-gray-800' : 'bg-gray-100'}`}
+              className={`flex items-center gap-3 text-left py-2 px-3 rounded-md ${isDarkTheme ? 'bg-gray-800' : 'bg-gray-100'}`}
             >
               {isDarkTheme ? '☀️ Light' : '🌙 Dark'}
             </button>
@@ -105,7 +122,7 @@ const SearchBox = ({ onSearch }) => {
   };
 
   return (
-    <form onSubmit={onSubmit} className="hidden md:flex items-center">
+    <form onSubmit={onSubmit} className="hidden md:flex items-center mr-2">
       <input
         type="text"
         value={term}
@@ -142,22 +159,31 @@ const MobileSearchBox = ({ onSearch }) => {
   );
 };
 
-const NavLink = ({ to, label, active }) => {
+const NavLink = ({ to, label, active, icon }) => {
   const { isDarkTheme } = useContext(ThemeContext);
-  const activeClassName = 'py-2 px-4 text-blue-500 border-b-2 border-blue-500 font-medium';
-  const inactiveClassName = `py-2 px-4 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'} hover:text-blue-500 transition duration-200`;
+  const activeClassName = 'flex items-center gap-1 py-2 px-3 text-blue-500 border-b-2 border-blue-500 font-medium text-sm';
+  const inactiveClassName = `flex items-center gap-1 py-2 px-3 text-sm ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'} hover:text-blue-500 transition duration-200`;
 
   return (
     <Link to={to} className={active ? activeClassName : inactiveClassName}>
+      {icon}
       {label}
     </Link>
   );
 };
 
-const MobileNavLink = ({ to, label, active, onClick }) => {
+const MobileNavLink = ({ to, label, icon, active, onClick }) => {
   const { isDarkTheme } = useContext(ThemeContext);
   return (
-    <Link to={to} onClick={onClick} className={`py-2 px-3 rounded-md ${active ? (isDarkTheme ? 'bg-gray-800' : 'bg-blue-50') : 'bg-transparent'}`}>
+    <Link
+      to={to}
+      onClick={onClick}
+      className={`flex items-center gap-3 py-2 px-3 rounded-md ${active
+          ? (isDarkTheme ? 'bg-gray-800 text-blue-400' : 'bg-blue-50 text-blue-600')
+          : 'bg-transparent'
+        }`}
+    >
+      {icon}
       {label}
     </Link>
   );

@@ -1,6 +1,7 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `static-cache-${CACHE_VERSION}`;
 const API_CACHE = `api-cache-${CACHE_VERSION}`;
+const AUDIO_CACHE = `audio-cache-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
   '/',
@@ -24,7 +25,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k !== STATIC_CACHE && k !== API_CACHE)
+          .filter((k) => k !== STATIC_CACHE && k !== API_CACHE && k !== AUDIO_CACHE)
           .map((k) => caches.delete(k))
       )
     )
@@ -40,11 +41,35 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET
   if (request.method !== 'GET') return;
 
+  // Audio requests (Quran.com audio files) - cache first, then network
+  if (
+    url.hostname.includes('verses.quran.com') ||
+    url.hostname.includes('audio') ||
+    url.pathname.endsWith('.mp3')
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request)
+          .then((res) => {
+            if (res && res.status === 200) {
+              const resClone = res.clone();
+              caches.open(AUDIO_CACHE).then((cache) => cache.put(request, resClone));
+            }
+            return res;
+          })
+          .catch(() => null);
+      })
+    );
+    return;
+  }
+
   // API requests (quran APIs) - network first then cache
   if (
     url.hostname.includes('quran.com') ||
     url.hostname.includes('quranenc.com') ||
     url.hostname.includes('nominatim.openstreetmap.org') ||
+    url.hostname.includes('raw.githubusercontent.com') ||
     url.pathname.startsWith('/api/')
   ) {
     event.respondWith(
@@ -74,7 +99,7 @@ self.addEventListener('fetch', (event) => {
       if (cached) return cached;
       return fetch(request)
         .then((res) => {
-          // don't cache opaque responses (e.g., cross-origin fonts sometimes)
+          // don't cache opaque responses
           if (!res || res.status !== 200 || res.type === 'opaque') return res;
           const resClone = res.clone();
           caches.open(STATIC_CACHE).then((cache) => cache.put(request, resClone));

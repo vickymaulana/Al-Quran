@@ -119,7 +119,7 @@ const SearchResults = () => {
                 }
               })
             );
-          } catch (e) {}
+          } catch (e) { }
 
           const getTranslationTextFb = (arr, verseNumber) => {
             if (!arr || arr.length === 0) return null;
@@ -161,8 +161,8 @@ const SearchResults = () => {
 
         <div className="space-y-4">
           {results.map((r, idx) => (
-            <div key={`${r.verse_key || idx}`} className={`p-4 rounded-lg shadow-md ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`} style={{direction: 'rtl'}}>
-              <h2 className="text-lg sm:text-xl font-bold text-right mb-2">{r.text_uthmani}</h2>
+            <div key={`${r.verse_key || idx}`} className={`p-4 rounded-lg shadow-md ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`} dir="rtl" lang="ar">
+              <h2 className="text-lg sm:text-xl font-bold text-right mb-2 font-amiri">{r.text_uthmani}</h2>
               {r.translation && (
                 <p className="text-left mt-2 italic text-gray-700 dark:text-gray-300" style={{ direction: 'ltr' }}>
                   {r.translation}

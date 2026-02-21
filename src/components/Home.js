@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import 'tailwindcss/tailwind.css';
+
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { fetchChapters, fetchVerses, fetchTranslations } from './apiService';
 import { getPrayerTimesByCoordinates } from './prayerTimeService';
 import { hadiths, duas } from './dailyContent';
 import { ThemeContext } from '../ThemeContext';
-import { FiClock, FiBook, FiSunrise, FiCompass, FiStar } from 'react-icons/fi';
-import { getJSON, setJSON, subscribeToStorageKey } from '../utils/storage';
+import { FiClock, FiBook, FiSunrise, FiCompass, FiStar, FiBarChart2, FiSettings } from 'react-icons/fi';
+import { getJSON, subscribeToStorageKey } from '../utils/storage';
 
 function Home() {
   const { isDarkTheme } = useContext(ThemeContext);
@@ -38,11 +38,10 @@ function Home() {
   }, []);
 
   useEffect(() => {
-    // cross-tab updates for lastRead
     const unsub = subscribeToStorageKey('lastRead', (newValue) => {
       try {
         setLastRead(newValue ? JSON.parse(newValue) : null);
-      } catch (e) {}
+      } catch (e) { }
     });
     return unsub;
   }, []);
@@ -53,7 +52,7 @@ function Home() {
         const chaptersResponse = await fetchChapters();
         setChapters(chaptersResponse.data.chapters);
 
-          const storedDate = localStorage.getItem('dailyContentDate');
+        const storedDate = localStorage.getItem('dailyContentDate');
         if (storedDate === currentDate) {
           setDailyVerse(JSON.parse(localStorage.getItem('dailyVerse')));
           setDailyHadith(localStorage.getItem('dailyHadith'));
@@ -63,7 +62,7 @@ function Home() {
         } else {
           const randomChapter =
             chaptersResponse.data.chapters[
-              Math.floor(Math.random() * chaptersResponse.data.chapters.length)
+            Math.floor(Math.random() * chaptersResponse.data.chapters.length)
             ];
           const randomVerseNumber =
             Math.floor(Math.random() * randomChapter.verses_count) + 1;
@@ -119,8 +118,6 @@ function Home() {
                   setError('Waktu sholat tidak ditemukan untuk tanggal ini.');
                 }
               } catch (err) {
-                // handle network or parsing errors gracefully
-                // eslint-disable-next-line no-console
                 console.error('Error during geolocation network requests:', err);
                 setError('Tidak dapat mengambil data lokasi atau waktu sholat. Coba lagi nanti.');
               }
@@ -154,14 +151,11 @@ function Home() {
         }
 
         const translationsResponse = await fetchTranslations(dailyVerse.chapterId);
-        // translations may be in different shapes: { result: [...] } or [...] or { data: ... }
         const trArr = translationsResponse?.data?.result || translationsResponse?.data || translationsResponse || [];
 
         const getTranslationText = (arr, verseNumber) => {
           if (!arr) return null;
-          // If it's an object with numeric keys, try to normalize to array
           if (!Array.isArray(arr) && typeof arr === 'object') {
-            // try to find values
             arr = Object.values(arr);
           }
           const idx = Number(verseNumber) - 1;
@@ -185,6 +179,18 @@ function Home() {
     fetchVerseText();
   }, [dailyVerse]);
 
+  // Calculate next prayer
+  useEffect(() => {
+    if (!prayerTimes) return;
+    const calcNext = () => {
+      const result = calculateNextPrayer(prayerTimes);
+      setNextPrayer(result);
+    };
+    calcNext();
+    const interval = setInterval(calcNext, 30000); // update every 30 seconds
+    return () => clearInterval(interval);
+  }, [prayerTimes]);
+
   const formatDate = (date) => {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('id-ID', options);
@@ -198,11 +204,6 @@ function Home() {
         second: '2-digit',
       }) + ' WIB'
     );
-  };
-
-  const { formattedDate, formattedTime } = {
-    formattedDate: formatDate(currentTime),
-    formattedTime: formatTime(currentTime),
   };
 
   const calculateNextPrayer = (times) => {
@@ -237,18 +238,17 @@ function Home() {
   return (
     <div className={`min-h-screen ${isDarkTheme ? 'bg-gray-900 text-gray-100' : 'bg-blue-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header dengan Gradient */}
+        {/* Header */}
         <motion.header
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-16"
         >
-          <div className={`inline-block rounded-2xl p-8 shadow-xl ${
-            isDarkTheme 
-              ? 'bg-gradient-to-br from-blue-800 to-purple-900'
-              : 'bg-gradient-to-br from-blue-600 to-purple-600'
-          }`}>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-poppins">
+          <div className={`inline-block rounded-2xl p-8 shadow-xl ${isDarkTheme
+            ? 'bg-gradient-to-br from-blue-800 to-purple-900'
+            : 'bg-gradient-to-br from-blue-600 to-purple-600'
+            }`}>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-inter">
               Quranic Journey
             </h1>
             <div className="text-white space-y-2">
@@ -267,9 +267,8 @@ function Home() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mb-10 rounded-2xl p-6 flex items-center justify-between shadow-lg ${
-              isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-            }`}
+            className={`mb-10 rounded-2xl p-6 flex items-center justify-between shadow-lg ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
+              }`}
           >
             <div>
               <p className="text-sm text-gray-500">Lanjutkan Membaca</p>
@@ -279,9 +278,8 @@ function Home() {
             </div>
             <Link
               to={`/ayat/${lastRead.chapterNumber}#verse-${lastRead.verseNumber}`}
-              className={`px-4 py-2 rounded-lg ${
-                isDarkTheme ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-              } text-white transition-colors`}
+              className={`px-4 py-2 rounded-lg ${isDarkTheme ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+                } text-white transition-colors`}
             >
               Lanjutkan
             </Link>
@@ -293,14 +291,12 @@ function Home() {
           {/* Ayat Harian */}
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className={`col-span-1 lg:col-span-2 rounded-3xl p-8 ${
-              isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-            } shadow-xl`}
+            className={`col-span-1 lg:col-span-2 rounded-3xl p-8 ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
+              } shadow-xl`}
           >
             <div className="flex items-center gap-4 mb-6">
-              <div className={`p-4 rounded-2xl ${
-                isDarkTheme ? 'bg-gray-700' : 'bg-blue-100'
-              }`}>
+              <div className={`p-4 rounded-2xl ${isDarkTheme ? 'bg-gray-700' : 'bg-blue-100'
+                }`}>
                 <FiBook className="text-3xl text-blue-500" />
               </div>
               <h2 className="text-2xl font-bold">Ayat Pilihan Hari Ini</h2>
@@ -317,18 +313,18 @@ function Home() {
                   setDailyVerse(newDailyVerse);
                   localStorage.setItem('dailyVerse', JSON.stringify(newDailyVerse));
                 }}
-                className={`ml-auto px-4 py-2 rounded-lg ${
-                  isDarkTheme ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-                } text-white transition-colors`}
+                className={`ml-auto px-4 py-2 rounded-lg ${isDarkTheme ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+                  } text-white transition-colors`}
               >
                 Refresh
               </button>
             </div>
-            <p className={`text-2xl leading-relaxed mb-4 text-right font-amiri ${
-              isDarkTheme ? 'text-white' : 'text-black'
-            }`}>
-              {dailyVerseText || (dailyVerse ? dailyVerse.text : 'Memuat ayat...')}
-            </p>
+            <div dir="rtl" lang="ar">
+              <p className={`text-2xl leading-relaxed mb-4 text-right font-amiri ${isDarkTheme ? 'text-white' : 'text-black'
+                }`}>
+                {dailyVerseText || (dailyVerse ? dailyVerse.text : 'Memuat ayat...')}
+              </p>
+            </div>
             <p className={`text-lg ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
               {dailyVerseTranslation || '"Dan sebutlah Tuhanmu dalam hatimu dengan merendahkan diri dan rasa takut, dan dengan tidak mengeraskan suara, pada waktu pagi dan petang, dan janganlah kamu termasuk orang-orang yang lalai."'}
             </p>
@@ -348,35 +344,31 @@ function Home() {
           {/* Waktu Shalat */}
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className={`rounded-3xl p-8 ${
-              isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-            } shadow-xl`}
+            className={`rounded-3xl p-8 ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
+              } shadow-xl`}
           >
             <div className="flex items-center gap-4 mb-6">
-              <div className={`p-4 rounded-2xl ${
-                isDarkTheme ? 'bg-gray-700' : 'bg-orange-100'
-              }`}>
+              <div className={`p-4 rounded-2xl ${isDarkTheme ? 'bg-gray-700' : 'bg-orange-100'
+                }`}>
                 <FiSunrise className="text-3xl text-orange-500" />
               </div>
               <h2 className="text-2xl font-bold">Waktu Shalat</h2>
             </div>
-            
+
             {error ? (
               <div className="text-red-400">{error}</div>
             ) : (
               <div className="space-y-4">
                 {prayerTimes && Object.entries(prayerTimes).map(([name, time]) => (
-                  <div key={name} className={`flex justify-between items-center p-4 rounded-xl ${
-                    isDarkTheme ? 'bg-gray-700' : 'bg-gradient-to-r from-blue-50 to-purple-50'
-                  }`}>
+                  <div key={name} className={`flex justify-between items-center p-4 rounded-xl ${isDarkTheme ? 'bg-gray-700' : 'bg-gradient-to-r from-blue-50 to-purple-50'
+                    }`}>
                     <span className="font-medium">{name}</span>
                     <span className="text-lg font-semibold">{time}</span>
                   </div>
                 ))}
                 {nextPrayer && (
-                  <div className={`mt-6 p-4 rounded-xl ${
-                    isDarkTheme ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
-                  } text-center`}>
+                  <div className={`mt-6 p-4 rounded-xl ${isDarkTheme ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
+                    } text-center`}>
                     <p className="font-medium">Shalat berikutnya:</p>
                     <p className="text-xl font-bold">{nextPrayer.name} - {nextPrayer.time}</p>
                     <p className="text-sm">({nextPrayer.remaining} lagi)</p>
@@ -388,41 +380,72 @@ function Home() {
         </div>
 
         {/* Navigasi Cepat */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12"
         >
           <Link
             to="/surah"
-            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 ${
-              isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-blue-50 text-gray-900'
-            }`}
+            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-blue-50 text-gray-900'
+              }`}
           >
-            <FiCompass className="text-4xl text-blue-500 mb-3" />
-            <span className="text-lg font-medium">Daftar Surah</span>
+            <FiBook className="text-3xl text-blue-500 mb-3" />
+            <span className="text-sm font-medium">Daftar Surah</span>
           </Link>
-          
+
           <Link
             to="/bookmarks"
-            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 ${
-              isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-blue-50 text-gray-900'
-            }`}
+            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-blue-50 text-gray-900'
+              }`}
           >
-            <FiStar className="text-4xl text-amber-500 mb-3" />
-            <span className="text-lg font-medium">Bookmarks</span>
+            <FiStar className="text-3xl text-amber-500 mb-3" />
+            <span className="text-sm font-medium">Bookmarks</span>
           </Link>
-          
-          {/* Tambahkan lebih banyak tombol navigasi sesuai kebutuhan */}
+
+          <Link
+            to="/tilawah"
+            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-green-50 text-gray-900'
+              }`}
+          >
+            <FiBarChart2 className="text-3xl text-green-500 mb-3" />
+            <span className="text-sm font-medium">Tilawah</span>
+          </Link>
+
+          <Link
+            to="/qibla"
+            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-emerald-50 text-gray-900'
+              }`}
+          >
+            <FiCompass className="text-3xl text-emerald-500 mb-3" />
+            <span className="text-sm font-medium">Arah Kiblat</span>
+          </Link>
+
+          <Link
+            to="/settings"
+            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-gray-50 text-gray-900'
+              }`}
+          >
+            <FiSettings className="text-3xl text-gray-500 mb-3" />
+            <span className="text-sm font-medium">Pengaturan</span>
+          </Link>
+
+          <Link
+            to="/search?query="
+            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-purple-50 text-gray-900'
+              }`}
+          >
+            <span className="text-3xl mb-3">🔍</span>
+            <span className="text-sm font-medium">Pencarian</span>
+          </Link>
         </motion.div>
 
         {/* Bagian Hadits dan Doa */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <motion.div 
+          <motion.div
             whileHover={{ scale: 1.02 }}
-            className={`rounded-3xl p-8 ${
-              isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-            } shadow-xl`}
+            className={`rounded-3xl p-8 ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
+              } shadow-xl`}
           >
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <FiStar className="text-amber-500" /> Hadits Hari Ini
@@ -432,9 +455,8 @@ function Home() {
                   setDailyHadith(randomHadith);
                   localStorage.setItem('dailyHadith', randomHadith);
                 }}
-                className={`ml-auto px-3 py-1 text-sm rounded-lg ${
-                  isDarkTheme ? 'bg-amber-600 hover:bg-amber-700' : 'bg-amber-500 hover:bg-amber-600'
-                } text-white transition-colors`}
+                className={`ml-auto px-3 py-1 text-sm rounded-lg ${isDarkTheme ? 'bg-amber-600 hover:bg-amber-700' : 'bg-amber-500 hover:bg-amber-600'
+                  } text-white transition-colors`}
               >
                 Refresh
               </button>
@@ -445,11 +467,10 @@ function Home() {
             <p className="mt-4 text-gray-500">HR. Muslim</p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             whileHover={{ scale: 1.02 }}
-            className={`rounded-3xl p-8 ${
-              isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-            } shadow-xl`}
+            className={`rounded-3xl p-8 ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
+              } shadow-xl`}
           >
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <FiStar className="text-green-500" /> Doa Harian
@@ -459,9 +480,8 @@ function Home() {
                   setDailyDua(randomDua);
                   localStorage.setItem('dailyDua', randomDua);
                 }}
-                className={`ml-auto px-3 py-1 text-sm rounded-lg ${
-                  isDarkTheme ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
-                } text-white transition-colors`}
+                className={`ml-auto px-3 py-1 text-sm rounded-lg ${isDarkTheme ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
+                  } text-white transition-colors`}
               >
                 Refresh
               </button>

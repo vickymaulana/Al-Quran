@@ -1,6 +1,6 @@
 {
   "name": "al-quran",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "vicky",
   "private": true,
   "dependencies": {
@@ -8,17 +8,18 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
-    "autoprefixer": "^9.8.8",
+    "autoprefixer": "^10.4.17",
     "axios": "^1.6.2",
     "daisyui": "^4.4.14",
     "framer-motion": "^10.16.14",
-    "postcss": "^7.0.39",
+    "postcss": "^8.4.35",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.4.0",
     "react-router-dom": "^6.20.0",
     "react-scripts": "5.0.1",
-    "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.17",
+    "react-virtuoso": "^4.6.3",
+    "tailwindcss": "^3.4.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

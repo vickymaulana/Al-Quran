@@ -10,6 +10,23 @@ const QURANENC_API = axios.create({
 	timeout: 10000,
 });
 
+// ===== Reciter IDs for Quran.com Audio API =====
+export const RECITERS = [
+	{ id: 7, name: 'Mishary Rashid Alafasy' },
+	{ id: 1, name: 'Abdul Baset Abdul Samad' },
+	{ id: 6, name: 'Mahmoud Khalil Al-Husary' },
+	{ id: 4, name: 'Abu Bakr Ash-Shaatree' },
+	{ id: 10, name: 'Saad Al-Ghamdi' },
+	{ id: 12, name: 'Maher Al Muaiqly' },
+];
+
+// ===== Tafsir IDs =====
+export const TAFSIRS = [
+	{ id: 169, name: 'Tafsir Jalalayn', language: 'ar' },
+	{ id: 816, name: 'Tafsir Al-Muyassar', language: 'ar' },
+];
+
+// ===== Existing API functions =====
 export const fetchVerses = (chapter_number, options = {}) =>
 	QURAN_API.get(`/quran/verses/uthmani`, { params: { chapter_number }, signal: options.signal });
 
@@ -53,13 +70,41 @@ export const fallbackSearchVerses = async (query, options = {}) => {
 					}
 				}
 			} catch (e) {
-				// ignore chapter fetch errors and continue
-				// keep console.warn but avoid throwing to allow partial results
 				// eslint-disable-next-line no-console
 				console.warn('Error fetching verses for chapter', ch.id, e?.message || e);
 			}
 		}
 		return { data: { matches: results } };
+	} catch (err) {
+		throw err;
+	}
+};
+
+// ===== Audio API =====
+export const fetchAudioForChapter = async (reciterId, chapterId, options = {}) => {
+	try {
+		const res = await QURAN_API.get(`/recitations/${reciterId}/by_chapter/${chapterId}`, {
+			signal: options.signal,
+		});
+		return res.data;
+	} catch (err) {
+		throw err;
+	}
+};
+
+export const getAudioUrl = (audioFile) => {
+	if (!audioFile || !audioFile.url) return null;
+	const base = 'https://verses.quran.com/';
+	return audioFile.url.startsWith('http') ? audioFile.url : `${base}${audioFile.url}`;
+};
+
+// ===== Tafsir API =====
+export const fetchTafsir = async (verseKey, tafsirId = 169, options = {}) => {
+	try {
+		const res = await QURAN_API.get(`/tafsirs/${tafsirId}/by_ayah/${verseKey}`, {
+			signal: options.signal,
+		});
+		return res.data;
 	} catch (err) {
 		throw err;
 	}
