@@ -1,6 +1,6 @@
 {
   "name": "al-quran",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "author": "vicky",
   "private": true,
   "dependencies": {
@@ -45,5 +45,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "postcss-flexbugs-fixes": "^5.0.2",
+    "postcss-preset-env": "^11.1.3"
   }
 }

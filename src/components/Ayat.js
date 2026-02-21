@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useFetchData } from './useFetchData';
 import { fetchSurahName } from './apiService';
 import { ThemeContext } from '../ThemeContext';
-import { FiBookmark, FiBook } from 'react-icons/fi';
+import { FiBookmark, FiBook, FiLink, FiShare2, FiPlay, FiChevronRight } from 'react-icons/fi';
 import { getJSON, setJSON, subscribeToStorageKey } from '../utils/storage';
 import { copyText, sharePayload } from '../utils/clipboard';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
@@ -26,7 +26,7 @@ function Ayat() {
   const [copiedVerse, setCopiedVerse] = useState(null);
   const [bookmarks, setBookmarks] = useState(() => getJSON('bookmarkedVerses', []));
   const [playingVerse, setPlayingVerse] = useState(null);
-  const [tafsirVerse, setTafsirVerse] = useState(null); // { key: "1:1", text: "..." }
+  const [tafsirVerse, setTafsirVerse] = useState(null);
   const timeoutsRef = useRef([]);
   const handledHashRef = useRef(null);
   const versesReadRef = useRef(0);
@@ -35,9 +35,7 @@ function Ayat() {
       const saved = localStorage.getItem('fontScale');
       const v = saved ? parseFloat(saved) : 1;
       return Number.isFinite(v) ? Math.min(1.6, Math.max(0.8, v)) : 1;
-    } catch (e) {
-      return 1;
-    }
+    } catch (e) { return 1; }
   });
 
   const navigateToNextChapter = () => {
@@ -51,51 +49,37 @@ function Ayat() {
       try {
         const res = await fetchSurahName(nextChapter, { signal: controller.signal });
         setNextSurahName(res?.data?.chapter?.name_simple || '');
-      } catch (e) {
-        // ignore errors for next surah name
-      }
+      } catch (e) { }
     };
     loadNext();
     return () => controller.abort();
   }, [nextChapter]);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [currentPage]);
+  useEffect(() => { window.scrollTo(0, 0); }, [currentPage]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('fontScale', String(fontScale));
-    } catch (e) { }
+    try { localStorage.setItem('fontScale', String(fontScale)); } catch (e) { }
   }, [fontScale]);
 
-  // Cross-tab sync for bookmarks
   useEffect(() => {
     const unsub = subscribeToStorageKey('bookmarkedVerses', (newValue) => {
-      try {
-        setBookmarks(newValue ? JSON.parse(newValue) : []);
-      } catch (e) { }
+      try { setBookmarks(newValue ? JSON.parse(newValue) : []); } catch (e) { }
     });
     return unsub;
   }, []);
 
-  // If navigated with a hash (e.g. #verse-10), scroll to that verse and set page.
   const location = useLocation();
   const [highlighted, setHighlighted] = useState(null);
 
   useEffect(() => {
     if (!data || data.length === 0) return;
-
     const hash = location.hash || window.location.hash;
     if (!hash) return;
     if (handledHashRef.current === hash) return;
-
     const match = hash.match(/#?verse-(\d+)/i);
     if (!match) return;
-
     const verseNumber = parseInt(match[1], 10);
     if (!verseNumber || verseNumber <= 0) return;
-
     const targetPage = Math.ceil(verseNumber / versesPerPage);
 
     const scrollToVerse = (vNum) => {
@@ -126,7 +110,6 @@ function Ayat() {
     }
   }, [location.pathname, location.hash, data, currentPage, chapter_number]);
 
-  // cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       timeoutsRef.current.forEach((t) => clearTimeout(t));
@@ -134,7 +117,6 @@ function Ayat() {
     };
   }, []);
 
-  // Log tilawah on unmount or chapter change
   useEffect(() => {
     versesReadRef.current = 0;
     return () => {
@@ -148,7 +130,6 @@ function Ayat() {
   const indexOfFirstVerse = indexOfLastVerse - versesPerPage;
   const currentVerses = data?.slice(indexOfFirstVerse, indexOfLastVerse) || [];
 
-  // Persist last read on page/surah changes
   useEffect(() => {
     if (!surahName || !chapter_number) return;
     setJSON('lastRead', {
@@ -165,10 +146,7 @@ function Ayat() {
       const existing = prev.find((b) => b.key === key);
       const updated = existing
         ? prev.filter((b) => b.key !== key)
-        : [
-          ...prev,
-          { key, surahName, verseNumber, text: verseText, translation },
-        ];
+        : [...prev, { key, surahName, verseNumber, text: verseText, translation }];
       setJSON('bookmarkedVerses', updated);
       return updated;
     });
@@ -176,264 +154,235 @@ function Ayat() {
 
   const handleVerseChange = useCallback((verseNum) => {
     setPlayingVerse(verseNum);
-    // Auto-scroll to the playing verse
     const el = document.getElementById(`verse-${verseNum}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    // Check if we need to change page
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const targetPage = Math.ceil(verseNum / versesPerPage);
-    if (targetPage !== currentPage) {
-      setCurrentPage(targetPage);
-    }
+    if (targetPage !== currentPage) setCurrentPage(targetPage);
   }, [currentPage]);
 
   const verseContainerVariants = prefersReducedMotion
-    ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
-    : { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
-
-  const renderVerses = () => {
-    if (currentVerses.length > 0) {
-      return (
-        <div className="space-y-6" style={{ fontSize: `${fontScale}em` }}>
-          {currentVerses.map((verse, index) => {
-            const translationIndex = index + indexOfFirstVerse;
-            const globalVerseNumber = index + indexOfFirstVerse + 1;
-            const isBookmarked = bookmarks.find((b) => b.key === `${chapter_number}:${globalVerseNumber}`);
-            const isPlayingThis = playingVerse === globalVerseNumber;
-            return (
-              <motion.div
-                id={`verse-${globalVerseNumber}`}
-                key={verse.id}
-                className={`${isDarkTheme ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-                  } p-6 rounded-xl shadow-md transition-all ${highlighted === globalVerseNumber ? 'ring-4 ring-yellow-300' : ''
-                  } ${isPlayingThis ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/30' : ''}`}
-                initial="hidden"
-                animate="visible"
-                variants={verseContainerVariants}
-                transition={{ duration: 0.5, delay: Math.min(index * 0.03, 0.5) }}
-                onMouseEnter={() => {
-                  versesReadRef.current += 1;
-                  setJSON('lastRead', {
-                    chapterNumber: Number(chapter_number),
-                    verseNumber: globalVerseNumber,
-                    surahName,
-                    updatedAt: Date.now(),
-                  });
-                }}
-              >
-                {/* Verse number badge */}
-                <div className="flex items-center justify-between mb-3" style={{ direction: 'ltr' }}>
-                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${isDarkTheme ? 'bg-gray-700 text-blue-400' : 'bg-blue-100 text-blue-600'
-                    }`}>
-                    {globalVerseNumber}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        if (window.__audioPlayerPlayVerse) {
-                          window.__audioPlayerPlayVerse(globalVerseNumber);
-                        }
-                      }}
-                      className="text-sm px-2 py-1 rounded bg-green-500 text-white hover:bg-green-600 transition"
-                      aria-label={`Play verse ${globalVerseNumber}`}
-                    >
-                      ▶
-                    </button>
-                    <button
-                      onClick={() => setTafsirVerse({
-                        key: `${chapter_number}:${globalVerseNumber}`,
-                        text: verse.text_uthmani,
-                      })}
-                      className={`text-sm px-2 py-1 rounded transition ${isDarkTheme ? 'bg-purple-700 text-white hover:bg-purple-600' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                        }`}
-                      aria-label={`Tafsir verse ${globalVerseNumber}`}
-                    >
-                      <FiBook size={14} className="inline mr-1" />
-                      Tafsir
-                    </button>
-                    <button
-                      onClick={async () => {
-                        const url = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
-                        await copyText(url);
-                        window.history.replaceState(null, '', `#verse-${globalVerseNumber}`);
-                        setCopiedVerse(globalVerseNumber);
-                        const t = setTimeout(() => setCopiedVerse(null), 2000);
-                        timeoutsRef.current.push(t);
-                        setJSON('lastRead', {
-                          chapterNumber: Number(chapter_number),
-                          verseNumber: globalVerseNumber,
-                          surahName,
-                          updatedAt: Date.now(),
-                        });
-                      }}
-                      className="text-sm px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 transition"
-                      aria-label={`Copy link to verse ${globalVerseNumber}`}
-                    >
-                      🔗
-                    </button>
-                    <button
-                      onClick={async () => {
-                        const shareUrl = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
-                        const shareText = `${surahName} • Ayat ${globalVerseNumber}\n\n${verse.text_uthmani}\n\n${translations?.[translationIndex]?.translation || ''}`.trim();
-                        await sharePayload({ title: `${surahName} ${globalVerseNumber}`, text: shareText, url: shareUrl });
-                        setJSON('lastRead', {
-                          chapterNumber: Number(chapter_number),
-                          verseNumber: globalVerseNumber,
-                          surahName,
-                          updatedAt: Date.now(),
-                        });
-                      }}
-                      className="text-sm px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
-                      aria-label={`Share verse ${globalVerseNumber}`}
-                    >
-                      Share
-                    </button>
-                    {copiedVerse === globalVerseNumber && (
-                      <span className="text-sm text-green-500">✓</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Arabic text */}
-                <div dir="rtl" lang="ar" aria-label={`Ayat ${globalVerseNumber}`}>
-                  <h2 className="text-lg sm:text-2xl font-bold text-right mb-4 font-amiri leading-loose">
-                    {verse.text_uthmani}
-                  </h2>
-                </div>
-
-                {/* Translation */}
-                <p
-                  className={`text-left mt-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'} text-sm sm:text-base`}
-                  dir="ltr"
-                  lang="id"
-                >
-                  {translations?.[translationIndex]?.translation}
-                </p>
-
-                {/* Bookmark */}
-                <button
-                  onClick={() =>
-                    toggleBookmark(
-                      globalVerseNumber,
-                      verse.text_uthmani,
-                      translations?.[translationIndex]?.translation
-                    )
-                  }
-                  className={`mt-4 p-2 rounded-full border transition-colors ${isBookmarked
-                      ? 'bg-yellow-400 text-white border-yellow-400'
-                      : 'bg-gray-200 text-gray-700 hover:bg-yellow-200 border-gray-300'
-                    }`}
-                  aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-                >
-                  <FiBookmark />
-                </button>
-              </motion.div>
-            );
-          })}
-        </div>
-      );
-    } else {
-      return <p className="text-center text-gray-500 mt-6">Memuat data...</p>;
-    }
-  };
-
-  const paginate = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
+    ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
+    : { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } };
 
   const totalPages = Math.ceil((data?.length || 0) / versesPerPage) || 1;
   const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
-  const renderBismillah = () => {
-    if (currentPage === 1 && chapter_number !== '1' && chapter_number !== '9') {
-      return (
-        <div
-          className={`text-center text-3xl font-bold mb-6 font-amiri ${isDarkTheme ? 'text-white' : 'text-gray-800'
-            }`}
-          dir="rtl"
-          lang="ar"
-          aria-label="Bismillahirrahmanirrahim"
-        >
-          بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
-        </div>
-      );
-    }
-  };
-
-  const renderPagination = () => {
-    const isLastPage = currentPage === totalPages;
-
-    return (
-      <div className="flex flex-wrap justify-center mt-8 space-x-2 mb-24">
-        {pageNumbers.map((pageNumber) => (
-          <motion.button
-            key={pageNumber}
-            className={`px-4 py-2 rounded-lg text-sm mb-2 transition duration-300 ${pageNumber === currentPage
-                ? 'bg-blue-600 text-white'
-                : `${isDarkTheme
-                  ? 'bg-gray-700 text-white hover:bg-blue-600'
-                  : 'bg-gray-300 text-gray-800 hover:bg-blue-500 hover:text-white'
-                }`
-              }`}
-            onClick={() => paginate(pageNumber)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {pageNumber}
-          </motion.button>
-        ))}
-        {isLastPage && (
-          <button
-            className="px-4 py-2 rounded-lg text-sm mb-2 bg-green-600 text-white hover:bg-green-500 transition duration-300"
-            onClick={navigateToNextChapter}
-          >
-            Surat Berikutnya: {nextSurahName || 'Surat Berikutnya'}
-          </button>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div
-      className={`min-h-screen py-8 ${isDarkTheme
-          ? 'bg-gray-900 text-white'
-          : 'bg-gradient-to-br from-blue-50 to-blue-100 text-gray-800'
-        }`}
-    >
-      <div className="container mx-auto px-4">
-        <h1 className="text-4xl font-bold mb-6 text-center">{surahName || 'Memuat...'}</h1>
-        {renderBismillah()}
+    <div className={`min-h-screen ${isDarkTheme ? 'bg-slate-950 text-white' : 'bg-surface-light text-slate-800'}`}>
+
+      {/* Surah Header */}
+      <div className={`${isDarkTheme ? 'bg-hero-dark' : 'bg-hero-light'} islamic-pattern-bg`}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-14 text-center">
+          <h1 className="text-3xl md:text-4xl font-poppins font-bold text-white mb-1">
+            {surahName || 'Memuat...'}
+          </h1>
+          {data && (
+            <p className="text-white/60 text-sm">{data.length} Ayat</p>
+          )}
+        </div>
+        <svg viewBox="0 0 1440 40" fill="none" className="w-full h-6 md:h-10">
+          <path d="M0 40V20C360 0 720 0 1080 20C1260 30 1380 40 1440 40H0Z" fill={isDarkTheme ? '#020617' : '#f8fafc'} />
+        </svg>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-2 pb-24">
+        {/* Bismillah */}
+        {currentPage === 1 && chapter_number !== '1' && chapter_number !== '9' && (
+          <div className={`text-center mb-8 py-6 rounded-2xl ${isDarkTheme ? 'bg-slate-900/50' : 'bg-white'} shadow-card`}>
+            <p className={`text-3xl md:text-4xl font-amiri ${isDarkTheme ? 'text-white' : 'text-slate-800'}`} dir="rtl" lang="ar" aria-label="Bismillahirrahmanirrahim">
+              بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
+            </p>
+          </div>
+        )}
+
         {loading ? (
-          <p className="text-center text-gray-500 mt-6">Memuat data...</p>
+          <div className="flex justify-center py-16">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-500 border-t-transparent" />
+          </div>
         ) : (
           <>
-            {renderVerses()}
-            {renderPagination()}
+            {/* Verses */}
+            <div className="space-y-4" style={{ fontSize: `${fontScale}em` }}>
+              {currentVerses.map((verse, index) => {
+                const translationIndex = index + indexOfFirstVerse;
+                const globalVerseNumber = index + indexOfFirstVerse + 1;
+                const isBookmarked = bookmarks.find((b) => b.key === `${chapter_number}:${globalVerseNumber}`);
+                const isPlayingThis = playingVerse === globalVerseNumber;
+
+                return (
+                  <motion.div
+                    id={`verse-${globalVerseNumber}`}
+                    key={verse.id}
+                    className={`group rounded-2xl p-5 md:p-6 transition-all border ${highlighted === globalVerseNumber
+                      ? `ring-2 ${isDarkTheme ? 'ring-amber-500/50 bg-amber-500/5' : 'ring-amber-400/50 bg-amber-50'}`
+                      : isPlayingThis
+                        ? `${isDarkTheme ? 'ring-1 ring-primary-500/30 bg-primary-500/5 border-primary-500/20' : 'ring-1 ring-primary-300 bg-primary-50 border-primary-200'}`
+                        : `${isDarkTheme ? 'bg-slate-900/40 border-white/5 hover:border-white/10' : 'bg-white border-slate-100 hover:border-slate-200'}`
+                      } shadow-card`}
+                    initial="hidden"
+                    animate="visible"
+                    variants={verseContainerVariants}
+                    transition={{ duration: 0.4, delay: Math.min(index * 0.03, 0.5) }}
+                    onMouseEnter={() => {
+                      versesReadRef.current += 1;
+                      setJSON('lastRead', {
+                        chapterNumber: Number(chapter_number),
+                        verseNumber: globalVerseNumber,
+                        surahName,
+                        updatedAt: Date.now(),
+                      });
+                    }}
+                  >
+                    {/* Verse Header */}
+                    <div className="flex items-center justify-between mb-4" style={{ direction: 'ltr' }}>
+                      {/* Number badge */}
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold ${isDarkTheme
+                        ? 'bg-primary-900/40 text-primary-400 border border-primary-500/20'
+                        : 'bg-primary-50 text-primary-700'
+                        }`}>
+                        {globalVerseNumber}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => window.__audioPlayerPlayVerse?.(globalVerseNumber)}
+                          className={`p-2 rounded-lg transition-colors ${isDarkTheme ? 'hover:bg-slate-700 text-emerald-400' : 'hover:bg-emerald-50 text-emerald-600'
+                            }`}
+                          aria-label={`Play verse ${globalVerseNumber}`}
+                        >
+                          <FiPlay size={14} />
+                        </button>
+                        <button
+                          onClick={() => setTafsirVerse({
+                            key: `${chapter_number}:${globalVerseNumber}`,
+                            text: verse.text_uthmani,
+                          })}
+                          className={`p-2 rounded-lg transition-colors ${isDarkTheme ? 'hover:bg-slate-700 text-violet-400' : 'hover:bg-violet-50 text-violet-600'
+                            }`}
+                          aria-label={`Tafsir verse ${globalVerseNumber}`}
+                        >
+                          <FiBook size={14} />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            const url = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
+                            await copyText(url);
+                            window.history.replaceState(null, '', `#verse-${globalVerseNumber}`);
+                            setCopiedVerse(globalVerseNumber);
+                            const t = setTimeout(() => setCopiedVerse(null), 2000);
+                            timeoutsRef.current.push(t);
+                            setJSON('lastRead', {
+                              chapterNumber: Number(chapter_number),
+                              verseNumber: globalVerseNumber,
+                              surahName,
+                              updatedAt: Date.now(),
+                            });
+                          }}
+                          className={`p-2 rounded-lg transition-colors ${copiedVerse === globalVerseNumber
+                            ? 'text-emerald-500'
+                            : isDarkTheme ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                            }`}
+                          aria-label={`Copy link to verse ${globalVerseNumber}`}
+                        >
+                          <FiLink size={14} />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            const shareUrl = `${window.location.origin}${window.location.pathname}#verse-${globalVerseNumber}`;
+                            const shareText = `${surahName} • Ayat ${globalVerseNumber}\n\n${verse.text_uthmani}\n\n${translations?.[translationIndex]?.translation || ''}`.trim();
+                            await sharePayload({ title: `${surahName} ${globalVerseNumber}`, text: shareText, url: shareUrl });
+                            setJSON('lastRead', {
+                              chapterNumber: Number(chapter_number),
+                              verseNumber: globalVerseNumber,
+                              surahName,
+                              updatedAt: Date.now(),
+                            });
+                          }}
+                          className={`p-2 rounded-lg transition-colors ${isDarkTheme ? 'hover:bg-slate-700 text-blue-400' : 'hover:bg-blue-50 text-blue-600'
+                            }`}
+                          aria-label={`Share verse ${globalVerseNumber}`}
+                        >
+                          <FiShare2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => toggleBookmark(globalVerseNumber, verse.text_uthmani, translations?.[translationIndex]?.translation)}
+                          className={`p-2 rounded-lg transition-all ${isBookmarked
+                            ? 'text-amber-500 bg-amber-500/10'
+                            : isDarkTheme ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                            }`}
+                          aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                        >
+                          <FiBookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Arabic text */}
+                    <div dir="rtl" lang="ar" aria-label={`Ayat ${globalVerseNumber}`}>
+                      <p className={`text-lg sm:text-2xl font-bold text-right mb-4 font-amiri leading-[2.4] ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                        {verse.text_uthmani}
+                      </p>
+                    </div>
+
+                    {/* Translation */}
+                    <p
+                      className={`text-left text-sm sm:text-base leading-relaxed ${isDarkTheme ? 'text-slate-400' : 'text-slate-600'}`}
+                      dir="ltr"
+                      lang="id"
+                    >
+                      {translations?.[translationIndex]?.translation}
+                    </p>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex flex-wrap justify-center mt-10 gap-2 mb-24">
+              {pageNumbers.map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${pageNumber === currentPage
+                    ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-glow-teal'
+                    : `${isDarkTheme
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                    }`
+                    }`}
+                  onClick={() => setCurrentPage(pageNumber)}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+              {currentPage === totalPages && nextChapter <= 114 && (
+                <button
+                  className="px-5 py-2 rounded-xl text-sm font-medium bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-md hover:shadow-lg transition-shadow flex items-center gap-1.5"
+                  onClick={navigateToNextChapter}
+                >
+                  {nextSurahName || 'Surat Berikutnya'} <FiChevronRight size={16} />
+                </button>
+              )}
+            </div>
+
             {/* Font size controls */}
-            <div className="fixed bottom-20 right-6 flex flex-col gap-2 z-30">
-              <button
-                onClick={() => setFontScale((s) => Math.max(0.8, Number((s - 0.1).toFixed(2))))}
-                className={`${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white text-gray-800 hover:bg-gray-100'} shadow-md rounded-full px-3 py-2`}
-                title="Kecilkan ukuran teks"
-              >
-                A-
-              </button>
-              <button
-                onClick={() => setFontScale(1)}
-                className={`${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white text-gray-800 hover:bg-gray-100'} shadow-md rounded-full px-3 py-2`}
-                title="Reset ukuran teks"
-              >
-                Reset
-              </button>
-              <button
-                onClick={() => setFontScale((s) => Math.min(1.6, Number((s + 0.1).toFixed(2))))}
-                className={`${isDarkTheme ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white text-gray-800 hover:bg-gray-100'} shadow-md rounded-full px-3 py-2`}
-                title="Perbesar ukuran teks"
-              >
-                A+
-              </button>
+            <div className="fixed bottom-20 right-4 flex flex-col gap-1.5 z-30">
+              {[
+                { label: 'A-', fn: () => setFontScale((s) => Math.max(0.8, Number((s - 0.1).toFixed(2)))) },
+                { label: 'R', fn: () => setFontScale(1) },
+                { label: 'A+', fn: () => setFontScale((s) => Math.min(1.6, Number((s + 0.1).toFixed(2)))) },
+              ].map((btn) => (
+                <button
+                  key={btn.label}
+                  onClick={btn.fn}
+                  className={`w-10 h-10 rounded-xl text-xs font-bold shadow-lg transition-all ${isDarkTheme
+                    ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-white/5'
+                    : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                    }`}
+                >
+                  {btn.label}
+                </button>
+              ))}
             </div>
           </>
         )}

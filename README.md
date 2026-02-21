@@ -1,61 +1,84 @@
-# Al-Quran ReactJS App
+# ☪️ Al-Quran React App v1.0.0
 
-This project, named Al-Quran ReactJS, is a modern web application developed using ReactJS and styled with Tailwind CSS. The application integrates with a RESTful API to provide a seamless experience for users.
-**Al-Quran — React**
+A modern, lightweight, and beautiful Quran reader web application built with **ReactJS**, **Tailwind CSS**, and **Framer Motion**. Designed to provide a serene and seamless experience for reading, listening, and studying the Holy Quran.
 
-- **Developer:** Vicky Maulana
+![Version](https://img.shields.io/badge/version-1.0.0-14b8a6?style=for-the-badge&logo=react)
+![License](https://img.shields.io/badge/license-MIT-0d9488?style=for-the-badge)
 
-**Overview:**
-- Lightweight Quran reader built with React, Tailwind CSS, Framer Motion and Axios.
-- Uses public Quran APIs to fetch surah/verse text and Indonesian translations.
+## ✨ Features
 
-**Features:**
-- View full surah and paginate verses (50 verses per page).
-- Copy verse link (updates URL hash) and share.
-- Bookmark verses (saved to `localStorage`).
-- Search (uses API with fallback search if needed).
-- Dark/light theme support.
-- Resume reading (Last Read): the app remembers the last surah/ayah you viewed and shows a "Lanjutkan Membaca" card on Home.
-- Adjustable font size on the Ayat page (A-/Reset/A+), persisted across visits.
+- **📖 Read the Quran:** Full surah views with pagination (50 verses per page) for comfortable reading.
+- **🎧 Audio Recitations:** Listen to verses using the built-in floating audio player with multiple Qari options (Mishary Rashid Alafasy, Abdul Baset, and more).
+- **📚 Translations & Tafsir:** Indonesian translations for every verse, along with complete Tafsir Jalalayn.
+- **🔍 Smart Search:** Search for verses or translations with a dedicated search interface and fallbacks.
+- **🧭 Qibla Compass:** Built-in Qibla direction finder using device geolocation and orientation sensors.
+- **📈 Tilawah Tracker:** Track your daily reading progress (ayat count and streaks) stored seamlessly.
+- **🔖 Bookmarks & Notes:** Save your favorite verses, add personal notes, and export/import your bookmarks as a JSON file.
+- **🌓 Adaptive Theme:** Beautiful light and dark modes with Islamic-inspired UI patterns and glassmorphism design.
+- **⚙️ Customization:** Adjustable Arabic text size to fit your reading comfort.
+- **📱 Responsive:** Fully optimized for mobile, tablet, and desktop screens with smooth animations.
+- **💾 Offline Ready:** Saves your preferences, bookmarks, and last-read position in local storage.
 
-**Quick Start**
-- Clone the repo and install dependencies:
+## 🚀 Quick Start
 
-```powershell
-git clone <repo-url>
-cd Al-Quran
-npm install
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/vickymaulana/Al-Quran.git
+   cd Al-Quran
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server:**
+   ```bash
+   npm start
+   ```
+   Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+
+4. **Build for production:**
+   ```bash
+   npm run build
+   ```
+
+## 🛠️ Tech Stack
+
+- **Frontend:** React.js (v18)
+- **Styling:** Tailwind CSS (v3), DaisyUI
+- **Animations:** Framer Motion
+- **Icons:** React Icons (Feather)
+- **Routing:** React Router v6
+- **HTTP Client:** Axios
+- **APIs Used:** 
+  - [Quran.com API v4](https://quran.com/docs/api) (Surahs, Verses, Audio, Tafsir)
+  - [QuranEnc API](https://quranenc.com/en/home) (Translations)
+
+## 📁 Project Structure
+
+```text
+src/
+├── components/          # Reusable UI components (Navbar, Footer, Modal, etc.)
+│   ├── apiService.js    # Centralized API logic and Axios instances
+│   ├── AudioPlayer.js   # Global floating audio player
+│   └── ...
+├── hooks/               # Custom React hooks (useFetchData, useDebouncedValue)
+├── utils/               # Helper utilities (storage, clipboard)
+├── App.js               # Main application routing
+├── ThemeContext.js      # Global state for Dark/Light mode
+└── index.css            # Custom Tailwind and CSS overrides
 ```
 
-- Run the app in development mode:
+## 👨‍💻 Developer
 
-```powershell
-npm start
-```
+**Vicky Maulana**
+- GitHub: [@vickymaulana](https://github.com/vickymaulana)
+- Email: [vickymaulanna@gmail.com](mailto:vickymaulanna@gmail.com)
 
-Open `http://localhost:3000`.
+## 📄 License
 
-**Scripts**
-- `npm start` — Run dev server (uses `craco`).
-- `npm run build` — Create production build (output in `build/`).
-- `npm test` — Run tests.
+This project is open-source and available under the [MIT License](LICENSE). Feel free to fork, modify, and improve it!
 
-**Notable Implementation Details**
-- Centralized API helpers in `src/components/apiService.js` (axios instances, timeouts, cancellation support).
-- Data hook `src/components/useFetchData.js` provides `{ data, translations, surahName, loading, error, refetch }` and uses `AbortController`.
-- Bookmarks persist in `localStorage` under the `bookmarkedVerses` key.
-- Last read progress persists in `localStorage` under the `lastRead` key with `{ chapterNumber, verseNumber, surahName, updatedAt }`.
-- Shared utilities:
-	- Storage helpers in `src/utils/storage.js` for safe JSON get/set and storage subscriptions.
-	- Clipboard helpers in `src/utils/clipboard.js` for copy/share with fallbacks.
-	- Hooks: `useDebouncedValue` for input debouncing and `usePrefersReducedMotion` to reduce animations when preferred by the user.
-
-**Development Notes & Recommendations**
-- The project uses Tailwind v2 compatibility build in `package.json`. Consider upgrading the Tailwind/PostCSS toolchain for newer features.
-- The app intentionally fetches translations from a separate provider; network errors are handled gracefully with user-facing loading/error states.
-
-**Contributing**
-- Make a branch, open a PR, describe changes. Keep changes focused and add tests if relevant.
-
-**License**
-- This project does not include a license file. Add one if you intend to publish.
+---
+*Dibuat dengan ❤️ menggunakan ReactJS.*

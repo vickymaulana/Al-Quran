@@ -1,0 +1,34 @@
+﻿Creating an optimized production build...
+
+­ƒî╝   [35mdaisyUI[39m [2m4.12.2[22m
+Ôö£ÔöÇ [32mÔ£ö´©Ä[39m 2 themes added[2m		https://daisyui.com/docs/themes[22m
+Ôò░ÔöÇ [32mÔÿà[39m [0mStar daisyUI on GitHub[0m	[2mhttps://github.com/saadeghi/daisyui[22m
+
+Compiled with warnings.
+
+[eslint] 
+src\components\AudioPlayer.js
+  Line 78:11:  'handleSeek' is assigned a value but never used  no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  128.05 kB  build\static\js\main.e70f8f68.js
+  13.65 kB   build\static\css\main.c8174082.css
+  1.77 kB    build\static\js\453.2313b7ec.chunk.js
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  npm install -g serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+

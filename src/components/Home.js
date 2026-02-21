@@ -1,14 +1,29 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { fetchChapters, fetchVerses, fetchTranslations } from './apiService';
 import { getPrayerTimesByCoordinates } from './prayerTimeService';
 import { hadiths, duas } from './dailyContent';
 import { ThemeContext } from '../ThemeContext';
-import { FiClock, FiBook, FiSunrise, FiCompass, FiStar, FiBarChart2, FiSettings } from 'react-icons/fi';
+import {
+  FiClock, FiBook, FiSunrise, FiCompass, FiStar, FiBarChart2,
+  FiSettings, FiBookmark, FiSearch, FiArrowRight, FiRefreshCw, FiMapPin
+} from 'react-icons/fi';
 import { getJSON, subscribeToStorageKey } from '../utils/storage';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, delay: i * 0.1, ease: [0.25, 0.46, 0.45, 0.94] },
+  }),
+};
+
+const stagger = {
+  visible: { transition: { staggerChildren: 0.08 } },
+};
 
 function Home() {
   const { isDarkTheme } = useContext(ThemeContext);
@@ -30,18 +45,13 @@ function Home() {
   const currentDate = currentTime.toLocaleDateString('id-ID');
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
     const unsub = subscribeToStorageKey('lastRead', (newValue) => {
-      try {
-        setLastRead(newValue ? JSON.parse(newValue) : null);
-      } catch (e) { }
+      try { setLastRead(newValue ? JSON.parse(newValue) : null); } catch (e) { }
     });
     return unsub;
   }, []);
@@ -60,12 +70,10 @@ function Home() {
           setDailyVerseText(localStorage.getItem('dailyVerseText') || '');
           setDailyVerseTranslation(localStorage.getItem('dailyVerseTranslation') || '');
         } else {
-          const randomChapter =
-            chaptersResponse.data.chapters[
+          const randomChapter = chaptersResponse.data.chapters[
             Math.floor(Math.random() * chaptersResponse.data.chapters.length)
-            ];
-          const randomVerseNumber =
-            Math.floor(Math.random() * randomChapter.verses_count) + 1;
+          ];
+          const randomVerseNumber = Math.floor(Math.random() * randomChapter.verses_count) + 1;
           const newDailyVerse = {
             chapterName: randomChapter.name_simple,
             chapterId: randomChapter.id,
@@ -91,7 +99,6 @@ function Home() {
             async (position) => {
               try {
                 const { latitude, longitude } = position.coords;
-
                 const response = await axios.get(
                   `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
                 );
@@ -102,7 +109,6 @@ function Home() {
                 setCity(userCity);
 
                 const times = await getPrayerTimesByCoordinates(userCity, month, year);
-
                 const todayTimes = times.find(
                   (time) => new Date(time.tanggal).getDate() === currentTime.getDate()
                 );
@@ -119,7 +125,7 @@ function Home() {
                 }
               } catch (err) {
                 console.error('Error during geolocation network requests:', err);
-                setError('Tidak dapat mengambil data lokasi atau waktu sholat. Coba lagi nanti.');
+                setError('Tidak dapat mengambil data lokasi atau waktu sholat.');
               }
             },
             (error) => {
@@ -155,9 +161,7 @@ function Home() {
 
         const getTranslationText = (arr, verseNumber) => {
           if (!arr) return null;
-          if (!Array.isArray(arr) && typeof arr === 'object') {
-            arr = Object.values(arr);
-          }
+          if (!Array.isArray(arr) && typeof arr === 'object') arr = Object.values(arr);
           const idx = Number(verseNumber) - 1;
           if (Array.isArray(arr) && arr.length > 0) {
             if (arr[idx]) return arr[idx].translation || arr[idx].text || arr[idx].translation_text || arr[idx].result || null;
@@ -179,15 +183,11 @@ function Home() {
     fetchVerseText();
   }, [dailyVerse]);
 
-  // Calculate next prayer
   useEffect(() => {
     if (!prayerTimes) return;
-    const calcNext = () => {
-      const result = calculateNextPrayer(prayerTimes);
-      setNextPrayer(result);
-    };
+    const calcNext = () => setNextPrayer(calculateNextPrayer(prayerTimes));
     calcNext();
-    const interval = setInterval(calcNext, 30000); // update every 30 seconds
+    const interval = setInterval(calcNext, 30000);
     return () => clearInterval(interval);
   }, [prayerTimes]);
 
@@ -197,13 +197,11 @@ function Home() {
   };
 
   const formatTime = (time) => {
-    return (
-      time.toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      }) + ' WIB'
-    );
+    return time.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }) + ' WIB';
   };
 
   const calculateNextPrayer = (times) => {
@@ -228,266 +226,365 @@ function Home() {
         return {
           name: prayer.name,
           time: prayer.time,
-          remaining: `${hoursLeft}h ${minutesLeft}m`,
+          remaining: `${hoursLeft}j ${minutesLeft}m`,
         };
       }
     }
     return null;
   };
 
-  return (
-    <div className={`min-h-screen ${isDarkTheme ? 'bg-gray-900 text-gray-100' : 'bg-blue-50 text-gray-900'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <motion.header
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16"
-        >
-          <div className={`inline-block rounded-2xl p-8 shadow-xl ${isDarkTheme
-            ? 'bg-gradient-to-br from-blue-800 to-purple-900'
-            : 'bg-gradient-to-br from-blue-600 to-purple-600'
-            }`}>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-inter">
-              Quranic Journey
-            </h1>
-            <div className="text-white space-y-2">
-              <p className="text-xl">{formatDate(currentTime)}</p>
-              <div className="flex items-center justify-center gap-2 text-3xl font-medium">
-                <FiClock className="inline-block" />
-                {formatTime(currentTime)}
-              </div>
-              {city && <p className="text-lg mt-2">📍 {city}</p>}
-            </div>
-          </div>
-        </motion.header>
+  const refreshVerse = () => {
+    if (!chapters.length) return;
+    const randomChapter = chapters[Math.floor(Math.random() * chapters.length)];
+    const randomVerseNumber = Math.floor(Math.random() * randomChapter.verses_count) + 1;
+    const newDailyVerse = {
+      chapterName: randomChapter.name_simple,
+      chapterId: randomChapter.id,
+      verseNumber: randomVerseNumber,
+      text: `Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`
+    };
+    setDailyVerse(newDailyVerse);
+    localStorage.setItem('dailyVerse', JSON.stringify(newDailyVerse));
+  };
 
-        {/* Lanjutkan Membaca */}
+  const prayerNames = { Fajr: 'Subuh', Dhuhr: 'Dzuhur', Asr: 'Ashar', Maghrib: 'Maghrib', Isha: 'Isya' };
+  const prayerIcons = { Fajr: '🌅', Dhuhr: '☀️', Asr: '🌤️', Maghrib: '🌇', Isha: '🌙' };
+
+  const quickLinks = [
+    { to: '/surah', label: 'Daftar Surah', icon: FiBook, color: 'from-primary-500 to-primary-600' },
+    { to: '/bookmarks', label: 'Bookmark', icon: FiBookmark, color: 'from-amber-500 to-amber-600' },
+    { to: '/tilawah', label: 'Tilawah', icon: FiBarChart2, color: 'from-emerald-500 to-emerald-600' },
+    { to: '/qibla', label: 'Arah Kiblat', icon: FiCompass, color: 'from-cyan-500 to-cyan-600' },
+    { to: '/settings', label: 'Pengaturan', icon: FiSettings, color: 'from-slate-500 to-slate-600' },
+    { to: '/search', label: 'Pencarian', icon: FiSearch, color: 'from-violet-500 to-violet-600' },
+  ];
+
+  return (
+    <div className={`min-h-screen ${isDarkTheme ? 'bg-slate-950' : 'bg-surface-light'}`}>
+
+      {/* ===== HERO SECTION ===== */}
+      <motion.section
+        initial="hidden"
+        animate="visible"
+        variants={fadeUp}
+        className={`relative overflow-hidden ${isDarkTheme ? 'bg-hero-dark' : 'bg-hero-light'} islamic-pattern-bg`}
+      >
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+          <div className="text-center text-white">
+            <motion.h1
+              variants={fadeUp}
+              custom={0}
+              className="text-4xl md:text-6xl font-poppins font-extrabold mb-4 drop-shadow-lg"
+            >
+              Quranic Journey
+            </motion.h1>
+            <motion.p variants={fadeUp} custom={1} className="text-lg md:text-xl text-white/80 mb-3">
+              {formatDate(currentTime)}
+            </motion.p>
+            <motion.div
+              variants={fadeUp}
+              custom={2}
+              className="inline-flex items-center gap-3 text-3xl md:text-4xl font-poppins font-bold tabular-nums"
+            >
+              <FiClock className="text-white/70" />
+              <span>{formatTime(currentTime)}</span>
+            </motion.div>
+            {city && (
+              <motion.p variants={fadeUp} custom={3} className="mt-3 flex items-center justify-center gap-1.5 text-white/70">
+                <FiMapPin size={14} /> {city}
+              </motion.p>
+            )}
+          </div>
+        </div>
+        {/* Decorative bottom curve */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 60" fill="none" className="w-full h-8 md:h-12">
+            <path
+              d="M0 60V30C240 0 480 0 720 30C960 60 1200 60 1440 30V60H0Z"
+              fill={isDarkTheme ? '#020617' : '#f8fafc'}
+            />
+          </svg>
+        </div>
+      </motion.section>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 pb-16 space-y-8">
+
+        {/* ===== CONTINUE READING ===== */}
         {lastRead && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mb-10 rounded-2xl p-6 flex items-center justify-between shadow-lg ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-              }`}
+            transition={{ delay: 0.2 }}
           >
-            <div>
-              <p className="text-sm text-gray-500">Lanjutkan Membaca</p>
-              <h3 className="text-xl font-semibold mt-1">
-                {lastRead.surahName} • Ayat {lastRead.verseNumber}
-              </h3>
-            </div>
             <Link
               to={`/ayat/${lastRead.chapterNumber}#verse-${lastRead.verseNumber}`}
-              className={`px-4 py-2 rounded-lg ${isDarkTheme ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-                } text-white transition-colors`}
+              className={`group glass-card flex items-center justify-between p-5 rounded-2xl ${isDarkTheme ? 'shadow-card-dark' : 'shadow-card'
+                }`}
             >
-              Lanjutkan
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDarkTheme ? 'bg-primary-900/40' : 'bg-primary-50'
+                  }`}>
+                  <FiBook className="text-primary-500 text-xl" />
+                </div>
+                <div>
+                  <p className={`text-xs font-medium uppercase tracking-wider ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Lanjutkan Membaca
+                  </p>
+                  <h3 className={`text-lg font-semibold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                    {lastRead.surahName} <span className="text-primary-500">•</span> Ayat {lastRead.verseNumber}
+                  </h3>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-primary-500 group-hover:translate-x-1 transition-transform">
+                <span className="text-sm font-medium hidden sm:block">Lanjutkan</span>
+                <FiArrowRight size={18} />
+              </div>
             </Link>
           </motion.div>
         )}
 
-        {/* Grid Konten Utama */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          {/* Ayat Harian */}
+        {/* ===== MAIN CONTENT GRID ===== */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* -- Daily Verse Card -- */}
           <motion.div
-            whileHover={{ scale: 1.02 }}
-            className={`col-span-1 lg:col-span-2 rounded-3xl p-8 ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-              } shadow-xl`}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className={`lg:col-span-2 glass-card rounded-3xl overflow-hidden ${isDarkTheme ? 'shadow-card-dark' : 'shadow-card'
+              }`}
           >
-            <div className="flex items-center gap-4 mb-6">
-              <div className={`p-4 rounded-2xl ${isDarkTheme ? 'bg-gray-700' : 'bg-blue-100'
-                }`}>
-                <FiBook className="text-3xl text-blue-500" />
+            {/* Gold accent top bar */}
+            <div className="h-1 bg-gold-gradient" />
+            <div className="p-6 md:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-xl ${isDarkTheme ? 'bg-gold-500/10' : 'bg-amber-50'}`}>
+                    <FiBook className="text-2xl text-gold-500" />
+                  </div>
+                  <div>
+                    <h2 className={`text-xl font-poppins font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                      Ayat Pilihan Hari Ini
+                    </h2>
+                    <p className={`text-xs ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Renungkan dan amalkan
+                    </p>
+                  </div>
+                </div>
+                <motion.button
+                  whileTap={{ rotate: 180 }}
+                  onClick={refreshVerse}
+                  className={`p-2.5 rounded-xl transition-colors ${isDarkTheme ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                    }`}
+                  title="Refresh ayat"
+                >
+                  <FiRefreshCw size={18} />
+                </motion.button>
               </div>
-              <h2 className="text-2xl font-bold">Ayat Pilihan Hari Ini</h2>
-              <button
-                onClick={() => {
-                  const randomChapter = chapters[Math.floor(Math.random() * chapters.length)];
-                  const randomVerseNumber = Math.floor(Math.random() * randomChapter.verses_count) + 1;
-                  const newDailyVerse = {
-                    chapterName: randomChapter.name_simple,
-                    chapterId: randomChapter.id,
-                    verseNumber: randomVerseNumber,
-                    text: `Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`
-                  };
-                  setDailyVerse(newDailyVerse);
-                  localStorage.setItem('dailyVerse', JSON.stringify(newDailyVerse));
-                }}
-                className={`ml-auto px-4 py-2 rounded-lg ${isDarkTheme ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-                  } text-white transition-colors`}
-              >
-                Refresh
-              </button>
-            </div>
-            <div dir="rtl" lang="ar">
-              <p className={`text-2xl leading-relaxed mb-4 text-right font-amiri ${isDarkTheme ? 'text-white' : 'text-black'
-                }`}>
-                {dailyVerseText || (dailyVerse ? dailyVerse.text : 'Memuat ayat...')}
+
+              {/* Arabic text */}
+              <div dir="rtl" lang="ar" className="mb-5">
+                <p className={`text-2xl md:text-3xl leading-[2.4] text-right font-amiri ${isDarkTheme ? 'text-white' : 'text-slate-800'
+                  }`}>
+                  {dailyVerseText || (dailyVerse ? dailyVerse.text : 'Memuat ayat...')}
+                </p>
+              </div>
+
+              {/* Translation */}
+              <p className={`text-base leading-relaxed ${isDarkTheme ? 'text-slate-400' : 'text-slate-600'}`}>
+                {dailyVerseTranslation || '"Dan sebutlah Tuhanmu dalam hatimu dengan merendahkan diri dan rasa takut, dan dengan tidak mengeraskan suara, pada waktu pagi dan petang, dan janganlah kamu termasuk orang-orang yang lalai."'}
               </p>
-            </div>
-            <p className={`text-lg ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
-              {dailyVerseTranslation || '"Dan sebutlah Tuhanmu dalam hatimu dengan merendahkan diri dan rasa takut, dan dengan tidak mengeraskan suara, pada waktu pagi dan petang, dan janganlah kamu termasuk orang-orang yang lalai."'}
-            </p>
-            <p className="mt-4 text-lg font-medium text-blue-500">
-              {dailyVerse ? `${dailyVerse.chapterName} ${dailyVerse.verseNumber}` : 'Al-A\'raf 7:205'}
-            </p>
-            {dailyVerse && (
-              <Link
-                to={`/ayat/${dailyVerse.chapterId}#verse-${dailyVerse.verseNumber}`}
-                className="mt-2 inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Baca Ayat Lengkap
-              </Link>
-            )}
-          </motion.div>
 
-          {/* Waktu Shalat */}
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className={`rounded-3xl p-8 ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-              } shadow-xl`}
-          >
-            <div className="flex items-center gap-4 mb-6">
-              <div className={`p-4 rounded-2xl ${isDarkTheme ? 'bg-gray-700' : 'bg-orange-100'
-                }`}>
-                <FiSunrise className="text-3xl text-orange-500" />
-              </div>
-              <h2 className="text-2xl font-bold">Waktu Shalat</h2>
-            </div>
-
-            {error ? (
-              <div className="text-red-400">{error}</div>
-            ) : (
-              <div className="space-y-4">
-                {prayerTimes && Object.entries(prayerTimes).map(([name, time]) => (
-                  <div key={name} className={`flex justify-between items-center p-4 rounded-xl ${isDarkTheme ? 'bg-gray-700' : 'bg-gradient-to-r from-blue-50 to-purple-50'
-                    }`}>
-                    <span className="font-medium">{name}</span>
-                    <span className="text-lg font-semibold">{time}</span>
-                  </div>
-                ))}
-                {nextPrayer && (
-                  <div className={`mt-6 p-4 rounded-xl ${isDarkTheme ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
-                    } text-center`}>
-                    <p className="font-medium">Shalat berikutnya:</p>
-                    <p className="text-xl font-bold">{nextPrayer.name} - {nextPrayer.time}</p>
-                    <p className="text-sm">({nextPrayer.remaining} lagi)</p>
-                  </div>
+              {/* Source & Link */}
+              <div className="mt-5 flex items-center justify-between">
+                <span className="text-sm font-medium text-primary-500">
+                  {dailyVerse ? `${dailyVerse.chapterName} ${dailyVerse.verseNumber}` : "Al-A'raf 7:205"}
+                </span>
+                {dailyVerse && (
+                  <Link
+                    to={`/ayat/${dailyVerse.chapterId}#verse-${dailyVerse.verseNumber}`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white text-sm font-medium hover:shadow-glow-teal transition-shadow"
+                  >
+                    Baca Ayat <FiArrowRight size={14} />
+                  </Link>
                 )}
               </div>
-            )}
+            </div>
+          </motion.div>
+
+          {/* -- Prayer Times Card -- */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={1}
+            className={`glass-card rounded-3xl overflow-hidden ${isDarkTheme ? 'shadow-card-dark' : 'shadow-card'}`}
+          >
+            <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className={`p-3 rounded-xl ${isDarkTheme ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                  <FiSunrise className="text-2xl text-orange-500" />
+                </div>
+                <h2 className={`text-xl font-poppins font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                  Waktu Shalat
+                </h2>
+              </div>
+
+              {error ? (
+                <div className={`text-sm p-3 rounded-xl text-center ${isDarkTheme ? 'text-red-400 bg-red-500/10' : 'text-red-500 bg-red-50'}`}>
+                  {error}
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {prayerTimes && Object.entries(prayerTimes).map(([name, time]) => {
+                    const isNext = nextPrayer && prayerNames[name] === nextPrayer.name;
+                    return (
+                      <div
+                        key={name}
+                        className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${isNext
+                          ? `${isDarkTheme ? 'bg-primary-900/30 ring-1 ring-primary-500/30' : 'bg-primary-50 ring-1 ring-primary-200'}`
+                          : `${isDarkTheme ? 'bg-slate-800/50' : 'bg-slate-50'}`
+                          }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="text-base">{prayerIcons[name]}</span>
+                          <span className={`text-sm font-medium ${isDarkTheme ? 'text-slate-300' : 'text-slate-700'}`}>
+                            {prayerNames[name]}
+                          </span>
+                        </span>
+                        <span className={`text-sm font-semibold tabular-nums ${isNext ? 'text-primary-500' : isDarkTheme ? 'text-white' : 'text-slate-800'
+                          }`}>
+                          {time}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {nextPrayer && (
+                    <div className={`mt-3 p-3 rounded-xl text-center ${isDarkTheme ? 'bg-primary-900/20 border border-primary-500/20' : 'bg-primary-50 border border-primary-100'
+                      }`}>
+                      <p className="text-xs text-primary-500 font-medium uppercase tracking-wider">Shalat berikutnya</p>
+                      <p className={`text-lg font-poppins font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                        {nextPrayer.name} — {nextPrayer.time}
+                      </p>
+                      <p className={`text-xs ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
+                        {nextPrayer.remaining} lagi
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </motion.div>
         </div>
 
-        {/* Navigasi Cepat */}
+        {/* ===== QUICK NAVIGATION ===== */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={stagger}
+          className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4"
         >
-          <Link
-            to="/surah"
-            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-blue-50 text-gray-900'
-              }`}
-          >
-            <FiBook className="text-3xl text-blue-500 mb-3" />
-            <span className="text-sm font-medium">Daftar Surah</span>
-          </Link>
-
-          <Link
-            to="/bookmarks"
-            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-blue-50 text-gray-900'
-              }`}
-          >
-            <FiStar className="text-3xl text-amber-500 mb-3" />
-            <span className="text-sm font-medium">Bookmarks</span>
-          </Link>
-
-          <Link
-            to="/tilawah"
-            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-green-50 text-gray-900'
-              }`}
-          >
-            <FiBarChart2 className="text-3xl text-green-500 mb-3" />
-            <span className="text-sm font-medium">Tilawah</span>
-          </Link>
-
-          <Link
-            to="/qibla"
-            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-emerald-50 text-gray-900'
-              }`}
-          >
-            <FiCompass className="text-3xl text-emerald-500 mb-3" />
-            <span className="text-sm font-medium">Arah Kiblat</span>
-          </Link>
-
-          <Link
-            to="/settings"
-            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-gray-50 text-gray-900'
-              }`}
-          >
-            <FiSettings className="text-3xl text-gray-500 mb-3" />
-            <span className="text-sm font-medium">Pengaturan</span>
-          </Link>
-
-          <Link
-            to="/search?query="
-            className={`p-6 rounded-2xl flex flex-col items-center transition-transform hover:scale-105 shadow-lg ${isDarkTheme ? 'bg-gray-800 hover:bg-gray-700 text-gray-100' : 'bg-white hover:bg-purple-50 text-gray-900'
-              }`}
-          >
-            <span className="text-3xl mb-3">🔍</span>
-            <span className="text-sm font-medium">Pencarian</span>
-          </Link>
+          {quickLinks.map((item, i) => {
+            const Icon = item.icon;
+            return (
+              <motion.div key={item.to} variants={fadeUp} custom={i}>
+                <Link
+                  to={item.to}
+                  className={`group flex flex-col items-center gap-2.5 p-5 rounded-2xl transition-all duration-300 ${isDarkTheme
+                    ? 'bg-slate-900/50 hover:bg-slate-800/80 border border-white/5 hover:border-white/10'
+                    : 'bg-white hover:shadow-card-hover border border-slate-100'
+                    }`}
+                >
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="text-white" size={20} />
+                  </div>
+                  <span className={`text-xs font-medium text-center ${isDarkTheme ? 'text-slate-400' : 'text-slate-600'}`}>
+                    {item.label}
+                  </span>
+                </Link>
+              </motion.div>
+            );
+          })}
         </motion.div>
 
-        {/* Bagian Hadits dan Doa */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* ===== HADITH & DUA ===== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Hadith Card */}
           <motion.div
-            whileHover={{ scale: 1.02 }}
-            className={`rounded-3xl p-8 ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-              } shadow-xl`}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className={`glass-card rounded-3xl overflow-hidden ${isDarkTheme ? 'shadow-card-dark' : 'shadow-card'}`}
           >
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <FiStar className="text-amber-500" /> Hadits Hari Ini
-              <button
-                onClick={() => {
-                  const randomHadith = hadiths[Math.floor(Math.random() * hadiths.length)];
-                  setDailyHadith(randomHadith);
-                  localStorage.setItem('dailyHadith', randomHadith);
-                }}
-                className={`ml-auto px-3 py-1 text-sm rounded-lg ${isDarkTheme ? 'bg-amber-600 hover:bg-amber-700' : 'bg-amber-500 hover:bg-amber-600'
-                  } text-white transition-colors`}
-              >
-                Refresh
-              </button>
-            </h3>
-            <p className="text-lg leading-relaxed">
-              {dailyHadith ? dailyHadith : 'Memuat hadits...'}
-            </p>
-            <p className="mt-4 text-gray-500">HR. Muslim</p>
+            <div className="h-1 bg-gradient-to-r from-amber-400 to-yellow-500" />
+            <div className="p-6 md:p-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-lg font-poppins font-bold flex items-center gap-2 ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                  <FiStar className="text-amber-500" /> Hadits Hari Ini
+                </h3>
+                <motion.button
+                  whileTap={{ rotate: 180 }}
+                  onClick={() => {
+                    const r = hadiths[Math.floor(Math.random() * hadiths.length)];
+                    setDailyHadith(r);
+                    localStorage.setItem('dailyHadith', r);
+                  }}
+                  className={`p-2 rounded-xl transition-colors ${isDarkTheme ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                    }`}
+                >
+                  <FiRefreshCw size={16} />
+                </motion.button>
+              </div>
+              <p className={`text-base leading-relaxed ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
+                {dailyHadith || 'Memuat hadits...'}
+              </p>
+              <p className={`mt-4 text-xs font-medium uppercase tracking-wider ${isDarkTheme ? 'text-slate-600' : 'text-slate-400'}`}>
+                HR. Muslim
+              </p>
+            </div>
           </motion.div>
 
+          {/* Dua Card */}
           <motion.div
-            whileHover={{ scale: 1.02 }}
-            className={`rounded-3xl p-8 ${isDarkTheme ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
-              } shadow-xl`}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={1}
+            className={`glass-card rounded-3xl overflow-hidden ${isDarkTheme ? 'shadow-card-dark' : 'shadow-card'}`}
           >
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <FiStar className="text-green-500" /> Doa Harian
-              <button
-                onClick={() => {
-                  const randomDua = duas[Math.floor(Math.random() * duas.length)];
-                  setDailyDua(randomDua);
-                  localStorage.setItem('dailyDua', randomDua);
-                }}
-                className={`ml-auto px-3 py-1 text-sm rounded-lg ${isDarkTheme ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
-                  } text-white transition-colors`}
-              >
-                Refresh
-              </button>
-            </h3>
-            <p className="text-lg mt-2">{dailyDua ? dailyDua : 'Memuat doa...'}</p>
-            <p className="mt-4 text-gray-500">QS. Ta Ha 20:114</p>
+            <div className="h-1 bg-gradient-to-r from-emerald-400 to-green-500" />
+            <div className="p-6 md:p-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-lg font-poppins font-bold flex items-center gap-2 ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                  <FiStar className="text-emerald-500" /> Doa Harian
+                </h3>
+                <motion.button
+                  whileTap={{ rotate: 180 }}
+                  onClick={() => {
+                    const r = duas[Math.floor(Math.random() * duas.length)];
+                    setDailyDua(r);
+                    localStorage.setItem('dailyDua', r);
+                  }}
+                  className={`p-2 rounded-xl transition-colors ${isDarkTheme ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                    }`}
+                >
+                  <FiRefreshCw size={16} />
+                </motion.button>
+              </div>
+              <p className={`text-base leading-relaxed ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
+                {dailyDua || 'Memuat doa...'}
+              </p>
+              <p className={`mt-4 text-xs font-medium uppercase tracking-wider ${isDarkTheme ? 'text-slate-600' : 'text-slate-400'}`}>
+                QS. Ta Ha 20:114
+              </p>
+            </div>
           </motion.div>
         </div>
       </div>
