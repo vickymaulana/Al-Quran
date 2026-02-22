@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchTafsir } from './apiService';
+import { fetchTafsirIndonesia } from './apiService';
 import { ThemeContext } from '../ThemeContext';
 import { FiX, FiBook } from 'react-icons/fi';
 
 const TafsirModal = ({ verseKey, verseText, onClose }) => {
     const { isDarkTheme } = useContext(ThemeContext);
-    const [tafsirData, setTafsirData] = useState(null);
+    const [tafsirText, setTafsirText] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -17,8 +17,16 @@ const TafsirModal = ({ verseKey, verseText, onClose }) => {
             setLoading(true);
             setError(null);
             try {
-                const data = await fetchTafsir(verseKey, 169, { signal: controller.signal });
-                setTafsirData(data?.tafsir || data);
+                // verseKey format: "chapterNumber:verseNumber"
+                const [surahNum, ayahNum] = verseKey.split(':').map(Number);
+                const data = await fetchTafsirIndonesia(surahNum, { signal: controller.signal });
+                const tafsirArray = data?.data?.tafsir || [];
+                const verseTafsir = tafsirArray.find(t => t.ayat === ayahNum);
+                if (verseTafsir && verseTafsir.teks) {
+                    setTafsirText(verseTafsir.teks);
+                } else {
+                    setTafsirText('');
+                }
             } catch (err) {
                 if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
                     setError('Gagal memuat tafsir. Coba lagi nanti.');
@@ -34,9 +42,6 @@ const TafsirModal = ({ verseKey, verseText, onClose }) => {
         window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onClose]);
-
-    const tafsirText = tafsirData?.text || tafsirData?.tafsir?.text || tafsirData?.resource_name || '';
-    const cleanText = tafsirText.replace(/<[^>]*>/g, '');
 
     return (
         <AnimatePresence>
@@ -111,18 +116,18 @@ const TafsirModal = ({ verseKey, verseText, onClose }) => {
                             </div>
                         )}
 
-                        {!loading && !error && cleanText && (
+                        {!loading && !error && tafsirText && (
                             <div className="space-y-3">
                                 <h3 className="text-xs font-semibold text-primary-500 uppercase tracking-wider">
-                                    Tafsir Jalalayn
+                                    Tafsir Kemenag
                                 </h3>
-                                <p className={`text-sm leading-relaxed whitespace-pre-line ${isDarkTheme ? 'text-slate-300' : 'text-slate-700'}`} dir="rtl" lang="ar">
-                                    {cleanText}
+                                <p className={`text-sm leading-relaxed whitespace-pre-line ${isDarkTheme ? 'text-slate-300' : 'text-slate-700'}`} dir="ltr" lang="id">
+                                    {tafsirText}
                                 </p>
                             </div>
                         )}
 
-                        {!loading && !error && !cleanText && (
+                        {!loading && !error && !tafsirText && (
                             <p className="text-center text-sm text-slate-400 py-8">
                                 Tafsir tidak tersedia untuk ayat ini.
                             </p>

@@ -10,6 +10,11 @@ const QURANENC_API = axios.create({
 	timeout: 10000,
 });
 
+const EQURAN_API = axios.create({
+	baseURL: 'https://equran.id/api/v2',
+	timeout: 15000,
+});
+
 // ===== Reciter IDs for Quran.com Audio API =====
 export const RECITERS = [
 	{ id: 7, name: 'Mishary Rashid Alafasy' },
@@ -22,7 +27,8 @@ export const RECITERS = [
 
 // ===== Tafsir IDs =====
 export const TAFSIRS = [
-	{ id: 169, name: 'Tafsir Jalalayn', language: 'ar' },
+	{ id: 'kemenag', name: 'Tafsir Kemenag (Indonesia)', language: 'id' },
+	{ id: 169, name: 'Tafsir Ibn Kathir (English)', language: 'en' },
 	{ id: 816, name: 'Tafsir Al-Muyassar', language: 'ar' },
 ];
 
@@ -102,6 +108,30 @@ export const getAudioUrl = (audioFile) => {
 export const fetchTafsir = async (verseKey, tafsirId = 169, options = {}) => {
 	try {
 		const res = await QURAN_API.get(`/tafsirs/${tafsirId}/by_ayah/${verseKey}`, {
+			signal: options.signal,
+		});
+		return res.data;
+	} catch (err) {
+		throw err;
+	}
+};
+
+// ===== Indonesian Tafsir (Kemenag via equran.id) =====
+export const fetchTafsirIndonesia = async (surahNumber, options = {}) => {
+	try {
+		const res = await EQURAN_API.get(`/tafsir/${surahNumber}`, {
+			signal: options.signal,
+		});
+		return res.data;
+	} catch (err) {
+		throw err;
+	}
+};
+
+// ===== Latin Transliteration (equran.id) =====
+export const fetchLatinData = async (chapterNumber, options = {}) => {
+	try {
+		const res = await EQURAN_API.get(`/surat/${chapterNumber}`, {
 			signal: options.signal,
 		});
 		return res.data;

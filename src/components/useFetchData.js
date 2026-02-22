@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchChapters, fetchVerses, fetchTranslations, fetchSurahName } from './apiService';
+import { fetchChapters, fetchVerses, fetchTranslations, fetchSurahName, fetchLatinData } from './apiService';
 
 export const useFetchData = (type, chapter_number) => {
     const [data, setData] = useState(null);
     const [translations, setTranslations] = useState(null);
+    const [latinData, setLatinData] = useState(null);
     const [surahName, setSurahName] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -16,16 +17,19 @@ export const useFetchData = (type, chapter_number) => {
                 const response = await fetchChapters({ signal });
                 setData(response.data.chapters);
             } else if (type === 'verses') {
-                const [versesResponse, translationsResponse, surahNameResponse] = await Promise.all([
+                const [versesResponse, translationsResponse, surahNameResponse, latinResponse] = await Promise.all([
                     fetchVerses(chapter_number, { signal }),
                     fetchTranslations(chapter_number, { signal }),
                     fetchSurahName(chapter_number, { signal }),
+                    fetchLatinData(chapter_number, { signal }).catch(() => null),
                 ]);
 
                 setData(versesResponse.data.verses);
                 // Support different translation payload shapes safely
                 setTranslations(translationsResponse?.data?.result || translationsResponse?.data || null);
                 setSurahName(surahNameResponse?.data?.chapter?.name_simple || '');
+                // Latin transliteration from equran.id
+                setLatinData(latinResponse?.data?.ayat || null);
             }
         } catch (err) {
             if (err.name === 'CanceledError' || err.name === 'AbortError') return;
@@ -48,5 +52,6 @@ export const useFetchData = (type, chapter_number) => {
         load(controller.signal);
     }, [load]);
 
-    return { data, translations, surahName, error, loading, refetch };
+    return { data, translations, latinData, surahName, error, loading, refetch };
 };
+

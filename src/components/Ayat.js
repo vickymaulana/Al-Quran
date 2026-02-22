@@ -16,7 +16,7 @@ function Ayat() {
   const { isDarkTheme } = useContext(ThemeContext);
   const versesPerPage = 50;
   const { chapter_number } = useParams();
-  const { data, translations, surahName, loading } = useFetchData('verses', chapter_number);
+  const { data, translations, latinData, surahName, loading } = useFetchData('verses', chapter_number);
   const nextChapter = parseInt(chapter_number, 10) + 1;
   const [nextSurahName, setNextSurahName] = useState('');
   const navigate = useNavigate();
@@ -36,6 +36,9 @@ function Ayat() {
       const v = saved ? parseFloat(saved) : 1;
       return Number.isFinite(v) ? Math.min(1.6, Math.max(0.8, v)) : 1;
     } catch (e) { return 1; }
+  });
+  const [showLatin, setShowLatin] = useState(() => {
+    try { return localStorage.getItem('showLatin') !== 'false'; } catch (e) { return true; }
   });
 
   const navigateToNextChapter = () => {
@@ -60,6 +63,10 @@ function Ayat() {
   useEffect(() => {
     try { localStorage.setItem('fontScale', String(fontScale)); } catch (e) { }
   }, [fontScale]);
+
+  useEffect(() => {
+    try { localStorage.setItem('showLatin', String(showLatin)); } catch (e) { }
+  }, [showLatin]);
 
   useEffect(() => {
     const unsub = subscribeToStorageKey('bookmarkedVerses', (newValue) => {
@@ -325,6 +332,17 @@ function Ayat() {
                       </p>
                     </div>
 
+                    {/* Latin transliteration */}
+                    {showLatin && latinData && latinData[index + indexOfFirstVerse] && (
+                      <p
+                        className={`text-left text-sm italic mb-3 leading-relaxed ${isDarkTheme ? 'text-primary-400' : 'text-primary-700'}`}
+                        dir="ltr"
+                        lang="id"
+                      >
+                        {latinData[index + indexOfFirstVerse].teksLatin}
+                      </p>
+                    )}
+
                     {/* Translation */}
                     <p
                       className={`text-left text-sm sm:text-base leading-relaxed ${isDarkTheme ? 'text-slate-400' : 'text-slate-600'}`}
@@ -365,20 +383,27 @@ function Ayat() {
               )}
             </div>
 
-            {/* Font size controls */}
+            {/* Font size & Latin toggle */}
             <div className="fixed bottom-20 right-4 flex flex-col gap-1.5 z-30">
               {[
                 { label: 'A-', fn: () => setFontScale((s) => Math.max(0.8, Number((s - 0.1).toFixed(2)))) },
                 { label: 'R', fn: () => setFontScale(1) },
                 { label: 'A+', fn: () => setFontScale((s) => Math.min(1.6, Number((s + 0.1).toFixed(2)))) },
+                { label: showLatin ? 'Aa' : 'Aa', fn: () => setShowLatin((s) => !s), isLatin: true },
               ].map((btn) => (
                 <button
-                  key={btn.label}
+                  key={btn.label + (btn.isLatin ? '-latin' : '')}
                   onClick={btn.fn}
-                  className={`w-10 h-10 rounded-xl text-xs font-bold shadow-lg transition-all ${isDarkTheme
-                    ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-white/5'
-                    : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                  className={`w-10 h-10 rounded-xl text-xs font-bold shadow-lg transition-all ${btn.isLatin
+                    ? (showLatin
+                      ? 'bg-primary-500 text-white border border-primary-400'
+                      : `${isDarkTheme ? 'bg-slate-800 text-slate-500 hover:bg-slate-700 border border-white/5' : 'bg-white text-slate-400 hover:bg-slate-50 border border-slate-200'}`)
+                    : `${isDarkTheme
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-white/5'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                    }`
                     }`}
+                  title={btn.isLatin ? (showLatin ? 'Sembunyikan Latin' : 'Tampilkan Latin') : ''}
                 >
                   {btn.label}
                 </button>
