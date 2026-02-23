@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchChapters, fetchVerses, fetchTranslations, fetchSurahName, fetchLatinData } from './apiService';
+import { getSurahNameKemenag } from '../utils/surahNamesKemenag';
 
 export const useFetchData = (type, chapter_number) => {
     const [data, setData] = useState(null);
@@ -27,7 +28,8 @@ export const useFetchData = (type, chapter_number) => {
                 setData(versesResponse.data.verses);
                 // Support different translation payload shapes safely
                 setTranslations(translationsResponse?.data?.result || translationsResponse?.data || null);
-                setSurahName(surahNameResponse?.data?.chapter?.name_simple || '');
+                const apiSurahName = surahNameResponse?.data?.chapter?.name_simple || '';
+                setSurahName(getSurahNameKemenag(chapter_number, apiSurahName));
                 // Latin transliteration from equran.id
                 setLatinData(latinResponse?.data?.ayat || null);
             }

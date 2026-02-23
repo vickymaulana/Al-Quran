@@ -11,6 +11,8 @@ import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import AudioPlayer from './AudioPlayer';
 import TafsirModal from './TafsirModal';
 import { logTilawah } from './TilawahTracker';
+import { getSurahNameKemenag } from '../utils/surahNamesKemenag';
+import SEO from './SEO';
 
 function Ayat() {
   const { isDarkTheme } = useContext(ThemeContext);
@@ -51,7 +53,8 @@ function Ayat() {
     const loadNext = async () => {
       try {
         const res = await fetchSurahName(nextChapter, { signal: controller.signal });
-        setNextSurahName(res?.data?.chapter?.name_simple || '');
+        const apiName = res?.data?.chapter?.name_simple || '';
+        setNextSurahName(getSurahNameKemenag(nextChapter, apiName));
       } catch (e) { }
     };
     loadNext();
@@ -176,6 +179,20 @@ function Ayat() {
 
   return (
     <div className={`min-h-screen ${isDarkTheme ? 'bg-slate-950 text-white' : 'bg-surface-light text-slate-800'}`}>
+      {surahName && (
+        <SEO
+          title={`Surat ${surahName}`}
+          description={`Baca Surat ${surahName}${data ? ` (${data.length} Ayat)` : ''} lengkap dengan teks Arab, terjemahan Bahasa Indonesia, transliterasi latin, tafsir, dan audio murottal.`}
+          path={`/ayat/${chapter_number}`}
+          jsonLd={{
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            name: `Surat ${surahName}`,
+            headline: `Surat ${surahName} — Al-Quran`,
+            description: `Baca Surat ${surahName} lengkap dengan terjemahan dan tafsir.`,
+          }}
+        />
+      )}
 
       {/* Surah Header */}
       <div className={`${isDarkTheme ? 'bg-hero-dark' : 'bg-hero-light'} islamic-pattern-bg`}>

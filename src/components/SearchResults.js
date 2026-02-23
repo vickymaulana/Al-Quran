@@ -3,11 +3,20 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { searchVerses, fallbackSearchVerses, fetchTranslations } from './apiService';
 import { ThemeContext } from '../ThemeContext';
-import { FiSearch, FiArrowRight } from 'react-icons/fi';
+import { FiSearch, FiArrowRight, FiBook } from 'react-icons/fi';
+import SURAH_NAMES_KEMENAG, { getSurahNameKemenag } from '../utils/surahNamesKemenag';
+import { fuzzyFilter } from '../utils/fuzzySearch';
+import SEO from './SEO';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
+
+// Build surah list for local fuzzy search
+const surahList = Object.entries(SURAH_NAMES_KEMENAG).map(([id, name]) => ({
+  id: Number(id),
+  name,
+}));
 
 const SearchResults = () => {
   const { isDarkTheme } = useContext(ThemeContext);
@@ -19,8 +28,20 @@ const SearchResults = () => {
 
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
+  const [matchedSurahs, setMatchedSurahs] = useState([]);
   const [error, setError] = useState(null);
 
+  // Local surah fuzzy match
+  useEffect(() => {
+    if (!q.trim()) {
+      setMatchedSurahs([]);
+      return;
+    }
+    const matches = fuzzyFilter(q, surahList, ['name', 'id'], 0.35);
+    setMatchedSurahs(matches.slice(0, 6));
+  }, [q]);
+
+  // API verse search
   useEffect(() => {
     const doSearch = async () => {
       if (!q.trim()) { setResults([]); return; }
@@ -75,6 +96,8 @@ const SearchResults = () => {
 
         const enriched = normalized.map((item) => ({
           ...item,
+          // Use Kemenag name
+          chapter_name: getSurahNameKemenag(item.chapter_id, item.chapter_name),
           translation: getTranslationText(translationsMap[item.chapter_id], item.verse_number),
         }));
 
@@ -84,7 +107,8 @@ const SearchResults = () => {
           const fallback = await fallbackSearchVerses(q);
           const fb = fallback?.data?.matches || [];
           const normalized = fb.map((m) => ({
-            chapter_id: m.chapter_id, chapter_name: m.chapter_name,
+            chapter_id: m.chapter_id,
+            chapter_name: getSurahNameKemenag(m.chapter_id, m.chapter_name),
             verse_number: m.verse_number, text_uthmani: m.text_uthmani, verse_key: m.verse_key,
           }));
           const chapterIdsFb = Array.from(new Set(normalized.map((n) => n.chapter_id).filter(Boolean)));
@@ -114,8 +138,16 @@ const SearchResults = () => {
     doSearch();
   }, [q]);
 
+  const totalResults = matchedSurahs.length + results.length;
+
   return (
     <div className={`min-h-screen ${isDarkTheme ? 'bg-slate-950 text-white' : 'bg-surface-light text-slate-800'}`}>
+      <SEO
+        title={q ? `Pencarian: ${q}` : 'Pencarian'}
+        description={q ? `Hasil pencarian Al-Quran untuk "${q}". Temukan ayat, surah, dan terjemahan.` : 'Cari ayat, surah, dan terjemahan dalam Al-Quran.'}
+        path={`/search${q ? `?query=${encodeURIComponent(q)}` : ''}`}
+      />
+
       {/* Header */}
       <div className={`${isDarkTheme ? 'bg-hero-dark' : 'bg-hero-light'} islamic-pattern-bg`}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-14 text-center">
@@ -123,8 +155,8 @@ const SearchResults = () => {
           <h1 className="text-2xl md:text-3xl font-poppins font-bold text-white">
             {q ? `Hasil untuk "${q}"` : 'Pencarian'}
           </h1>
-          {!loading && results.length > 0 && (
-            <p className="text-white/60 text-sm mt-1">{results.length} hasil ditemukan</p>
+          {!loading && totalResults > 0 && (
+            <p className="text-white/60 text-sm mt-1">{totalResults} hasil ditemukan</p>
           )}
           {/* Inline search form */}
           <form
@@ -140,7 +172,7 @@ const SearchResults = () => {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Cari ayat atau kata..."
+              placeholder="Cari surah, ayat, atau kata kunci..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               autoFocus={!q}
@@ -154,66 +186,120 @@ const SearchResults = () => {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 -mt-2 pb-16">
+        {/* Matched Surahs Section */}
+        {matchedSurahs.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <h2 className={`text-sm font-semibold uppercase tracking-wider mb-3 flex items-center gap-2 ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
+              <FiBook size={14} /> Surah yang Cocok
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {matchedSurahs.map((surah) => (
+                <Link
+                  key={surah.id}
+                  to={`/ayat/${surah.id}`}
+                  className={`group flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 ${isDarkTheme
+                    ? 'bg-slate-900/40 border-white/5 hover:border-primary-500/30 hover:bg-slate-800/60'
+                    : 'bg-white border-slate-100 hover:border-primary-200 hover:shadow-md'
+                    }`}
+                >
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isDarkTheme
+                    ? 'bg-primary-900/40 text-primary-400'
+                    : 'bg-primary-50 text-primary-700'
+                    }`}>
+                    {surah.id}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold truncate ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                      {surah.name}
+                    </p>
+                  </div>
+                  <FiArrowRight size={14} className="ml-auto text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Loading */}
         {loading && (
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-500 border-t-transparent" />
           </div>
         )}
 
+        {/* Error */}
         {error && (
           <div className={`text-center py-8 rounded-2xl ${isDarkTheme ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-500'}`}>
             {error}
           </div>
         )}
 
-        {!loading && results.length === 0 && !error && (
+        {/* Empty State */}
+        {!loading && results.length === 0 && matchedSurahs.length === 0 && !error && (
           <div className="text-center py-16">
             <FiSearch className={`mx-auto text-4xl mb-4 ${isDarkTheme ? 'text-slate-700' : 'text-slate-300'}`} />
             <p className={isDarkTheme ? 'text-slate-500' : 'text-slate-400'}>
               {q ? 'Tidak ada hasil ditemukan.' : 'Masukkan kata kunci untuk mencari.'}
             </p>
+            {q && (
+              <p className={`text-sm mt-2 ${isDarkTheme ? 'text-slate-600' : 'text-slate-400'}`}>
+                Coba gunakan kata kunci yang berbeda atau cari nama surah
+              </p>
+            )}
           </div>
         )}
 
-        <div className="space-y-4">
-          {results.map((r, idx) => (
-            <motion.div
-              key={`${r.verse_key || idx}`}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(idx * 0.05, 0.3) }}
-              className={`rounded-2xl overflow-hidden border ${isDarkTheme ? 'border-white/5 bg-slate-900/40' : 'border-slate-100 bg-white'} shadow-card`}
-            >
-              <div className="h-0.5 bg-teal-gradient" />
-              <div className="p-5 md:p-6">
-                {/* Arabic */}
-                <div dir="rtl" lang="ar">
-                  <p className={`text-lg sm:text-xl font-bold text-right mb-3 font-amiri leading-[2.2] ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
-                    {r.text_uthmani}
-                  </p>
-                </div>
-                {/* Translation */}
-                {r.translation && (
-                  <p className={`text-sm leading-relaxed mb-3 ${isDarkTheme ? 'text-slate-400' : 'text-slate-600'}`} style={{ direction: 'ltr' }}>
-                    {r.translation}
-                  </p>
-                )}
-                {/* Info + Link */}
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs font-medium ${isDarkTheme ? 'text-primary-400' : 'text-primary-600'}`}>
-                    {r.chapter_name || `Surat ${r.chapter_id}`} — Ayat {r.verse_number}
-                  </span>
-                  <Link
-                    to={`/ayat/${r.chapter_id}#verse-${r.verse_number}`}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-primary-500 hover:text-primary-400 transition-colors"
-                  >
-                    Buka <FiArrowRight size={12} />
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        {/* Verse Results */}
+        {results.length > 0 && (
+          <>
+            <h2 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
+              Ayat yang Ditemukan
+            </h2>
+            <div className="space-y-4">
+              {results.map((r, idx) => (
+                <motion.div
+                  key={`${r.verse_key || idx}`}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(idx * 0.05, 0.3) }}
+                  className={`rounded-2xl overflow-hidden border ${isDarkTheme ? 'border-white/5 bg-slate-900/40' : 'border-slate-100 bg-white'} shadow-card`}
+                >
+                  <div className="h-0.5 bg-teal-gradient" />
+                  <div className="p-5 md:p-6">
+                    {/* Arabic */}
+                    <div dir="rtl" lang="ar">
+                      <p className={`text-lg sm:text-xl font-bold text-right mb-3 font-amiri leading-[2.2] ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                        {r.text_uthmani}
+                      </p>
+                    </div>
+                    {/* Translation */}
+                    {r.translation && (
+                      <p className={`text-sm leading-relaxed mb-3 ${isDarkTheme ? 'text-slate-400' : 'text-slate-600'}`} style={{ direction: 'ltr' }}>
+                        {r.translation}
+                      </p>
+                    )}
+                    {/* Info + Link */}
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-medium ${isDarkTheme ? 'text-primary-400' : 'text-primary-600'}`}>
+                        {r.chapter_name || `Surat ${r.chapter_id}`} — Ayat {r.verse_number}
+                      </span>
+                      <Link
+                        to={`/ayat/${r.chapter_id}#verse-${r.verse_number}`}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary-500 hover:text-primary-400 transition-colors"
+                      >
+                        Buka <FiArrowRight size={12} />
+                      </Link>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

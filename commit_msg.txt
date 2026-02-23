@@ -1,0 +1,7 @@
+feat: comprehensive search architecture, Kemenag standards & SEO optimization
+
+- **Search Architecture**: completely overhauled search logic using custom Levenshtein distance fuzzy matching without external dependencies.
+- **Unified Search UI**: refactored Navbar to use a singular, responsive search modal overlay with real-time fuzzy suggestions, resolving desktop redundancy.
+- **Kemenag Standardization**: implemented official Kemenag RI surah name mapping across the entire application (Surah lists, Ayat views, Search results, and Daily Verses).
+- **Intelligent Prayer Times**: rebuilt prayer schedule geolocation with a 3-layer robust fallback (LocalStorage -> Auto-detect -> Manual Input) featuring a searchable city dropdown and secondary API integration.
+- **SEO & Discoverability**: integrated react-helmet-async for dynamic routing metadata, Open Graph & Twitter Cards, and JSON-LD WebApplication schema for structured data indexing.

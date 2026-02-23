@@ -11,6 +11,8 @@ import {
   FiSettings, FiBookmark, FiSearch, FiArrowRight, FiRefreshCw, FiMapPin
 } from 'react-icons/fi';
 import { getJSON, subscribeToStorageKey } from '../utils/storage';
+import { getSurahNameKemenag } from '../utils/surahNamesKemenag';
+import SEO from './SEO';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -25,6 +27,15 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 };
 
+// Daftar kota populer Indonesia untuk fallback manual
+const POPULAR_CITIES = [
+  'Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Semarang', 'Makassar',
+  'Palembang', 'Tangerang', 'Depok', 'Bekasi', 'Yogyakarta', 'Malang',
+  'Solo', 'Bogor', 'Denpasar', 'Batam', 'Banjarmasin', 'Pontianak',
+  'Manado', 'Padang', 'Pekanbaru', 'Jambi', 'Mataram', 'Kupang',
+  'Ambon', 'Jayapura', 'Samarinda', 'Balikpapan', 'Lampung', 'Cirebon',
+];
+
 function Home() {
   const { isDarkTheme } = useContext(ThemeContext);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -35,10 +46,16 @@ function Home() {
   const [dailyDua, setDailyDua] = useState('');
   const [chapters, setChapters] = useState([]);
   const [prayerTimes, setPrayerTimes] = useState(null);
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState(() => {
+    try { return localStorage.getItem('prayerCity') || ''; } catch { return ''; }
+  });
   const [error, setError] = useState(null);
   const [nextPrayer, setNextPrayer] = useState(null);
   const [lastRead, setLastRead] = useState(() => getJSON('lastRead', null));
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
+  const [prayerLoading, setPrayerLoading] = useState(false);
+  const [locationMethod, setLocationMethod] = useState(''); // 'auto' | 'manual'
 
   const month = (currentTime.getMonth() + 1).toString().padStart(2, '0');
   const year = currentTime.getFullYear();
@@ -74,11 +91,12 @@ function Home() {
             Math.floor(Math.random() * chaptersResponse.data.chapters.length)
           ];
           const randomVerseNumber = Math.floor(Math.random() * randomChapter.verses_count) + 1;
+          const kemenagName = getSurahNameKemenag(randomChapter.id, randomChapter.name_simple);
           const newDailyVerse = {
-            chapterName: randomChapter.name_simple,
+            chapterName: kemenagName,
             chapterId: randomChapter.id,
             verseNumber: randomVerseNumber,
-            text: `Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`
+            text: `Surat ${kemenagName} Ayat ${randomVerseNumber}`
           };
           setDailyVerse(newDailyVerse);
           localStorage.setItem('dailyVerse', JSON.stringify(newDailyVerse));
@@ -94,56 +112,139 @@ function Home() {
           localStorage.setItem('dailyContentDate', currentDate);
         }
 
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              try {
-                const { latitude, longitude } = position.coords;
-                const response = await axios.get(
-                  `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-                );
-                const userCity =
-                  response?.data?.address?.city ||
-                  response?.data?.address?.town ||
-                  response?.data?.address?.village || '';
-                setCity(userCity);
-
-                const times = await getPrayerTimesByCoordinates(userCity, month, year);
-                const todayTimes = times.find(
-                  (time) => new Date(time.tanggal).getDate() === currentTime.getDate()
-                );
-                if (todayTimes) {
-                  setPrayerTimes({
-                    Fajr: todayTimes.shubuh,
-                    Dhuhr: todayTimes.dzuhur,
-                    Asr: todayTimes.ashr,
-                    Maghrib: todayTimes.magrib,
-                    Isha: todayTimes.isya,
-                  });
-                } else {
-                  setError('Waktu sholat tidak ditemukan untuk tanggal ini.');
-                }
-              } catch (err) {
-                console.error('Error during geolocation network requests:', err);
-                setError('Tidak dapat mengambil data lokasi atau waktu sholat.');
-              }
-            },
-            (error) => {
-              console.error('Error fetching location:', error);
-              setError('Tidak dapat mengambil lokasi. Pastikan GPS Anda aktif.');
-            }
-          );
-        } else {
-          setError('Geolocation tidak didukung oleh browser ini.');
-        }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Terjadi kesalahan saat mengambil data.');
       }
     };
 
     fetchData();
-  }, [month, year, currentTime, currentDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate]);
+
+  // ===== Prayer Times: Smart Loading =====
+  const loadPrayerTimesForCity = async (targetCity) => {
+    if (!targetCity) return;
+    setPrayerLoading(true);
+    setError(null);
+    try {
+      // Try primary API
+      const times = await getPrayerTimesByCoordinates(targetCity, month, year);
+      if (Array.isArray(times) && times.length > 0) {
+        const todayTimes = times.find(
+          (time) => new Date(time.tanggal).getDate() === currentTime.getDate()
+        );
+        if (todayTimes) {
+          setPrayerTimes({
+            Fajr: todayTimes.shubuh,
+            Dhuhr: todayTimes.dzuhur,
+            Asr: todayTimes.ashr,
+            Maghrib: todayTimes.magrib,
+            Isha: todayTimes.isya,
+          });
+          setCity(targetCity);
+          try { localStorage.setItem('prayerCity', targetCity); } catch (e) { }
+          setPrayerLoading(false);
+          return;
+        }
+      }
+      // Fallback: Aladhan API (by city name)
+      const today = `${currentTime.getDate()}-${month}-${year}`;
+      const aladhanRes = await axios.get(
+        `https://api.aladhan.com/v1/timingsByCity/${today}?city=${encodeURIComponent(targetCity)}&country=Indonesia&method=20`
+      );
+      const aladhanTimings = aladhanRes?.data?.data?.timings;
+      if (aladhanTimings) {
+        setPrayerTimes({
+          Fajr: aladhanTimings.Fajr,
+          Dhuhr: aladhanTimings.Dhuhr,
+          Asr: aladhanTimings.Asr,
+          Maghrib: aladhanTimings.Maghrib,
+          Isha: aladhanTimings.Isha,
+        });
+        setCity(targetCity);
+        try { localStorage.setItem('prayerCity', targetCity); } catch (e) { }
+      } else {
+        setError('Waktu sholat tidak ditemukan untuk kota ini.');
+      }
+    } catch (err) {
+      console.error('Error fetching prayer times:', err);
+      setError('Gagal mengambil waktu sholat. Coba pilih kota lain.');
+    } finally {
+      setPrayerLoading(false);
+    }
+  };
+
+  // Auto-detect or load saved city for prayer times
+  useEffect(() => {
+    const savedCity = localStorage.getItem('prayerCity');
+    if (savedCity) {
+      // Use saved city
+      setLocationMethod('manual');
+      loadPrayerTimesForCity(savedCity);
+      return;
+    }
+
+    // Try geolocation
+    if (navigator.geolocation) {
+      setLocationMethod('auto');
+      setPrayerLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const response = await axios.get(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            );
+            const userCity =
+              response?.data?.address?.city ||
+              response?.data?.address?.town ||
+              response?.data?.address?.village || '';
+            if (userCity) {
+              loadPrayerTimesForCity(userCity);
+            } else {
+              setError(null);
+              setShowCityPicker(true);
+              setPrayerLoading(false);
+            }
+          } catch (err) {
+            console.error('Error during geolocation:', err);
+            setError(null);
+            setShowCityPicker(true);
+            setPrayerLoading(false);
+          }
+        },
+        () => {
+          // Geolocation denied/failed — show manual picker
+          setError(null);
+          setShowCityPicker(true);
+          setPrayerLoading(false);
+        },
+        { timeout: 8000, maximumAge: 300000 }
+      );
+    } else {
+      // No geolocation — show manual picker
+      setShowCityPicker(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate]);
+
+  const handleSelectCity = (selectedCity) => {
+    setShowCityPicker(false);
+    setLocationMethod('manual');
+    setCitySearch('');
+    loadPrayerTimesForCity(selectedCity);
+  };
+
+  const handleChangeCity = () => {
+    setPrayerTimes(null);
+    setError(null);
+    setShowCityPicker(true);
+    setCitySearch('');
+  };
+
+  const filteredCities = POPULAR_CITIES.filter(c =>
+    c.toLowerCase().includes(citySearch.toLowerCase())
+  );
 
   useEffect(() => {
     const fetchVerseText = async () => {
@@ -237,11 +338,12 @@ function Home() {
     if (!chapters.length) return;
     const randomChapter = chapters[Math.floor(Math.random() * chapters.length)];
     const randomVerseNumber = Math.floor(Math.random() * randomChapter.verses_count) + 1;
+    const kemenagName = getSurahNameKemenag(randomChapter.id, randomChapter.name_simple);
     const newDailyVerse = {
-      chapterName: randomChapter.name_simple,
+      chapterName: kemenagName,
       chapterId: randomChapter.id,
       verseNumber: randomVerseNumber,
-      text: `Surat ${randomChapter.name_simple} Ayat ${randomVerseNumber}`
+      text: `Surat ${kemenagName} Ayat ${randomVerseNumber}`
     };
     setDailyVerse(newDailyVerse);
     localStorage.setItem('dailyVerse', JSON.stringify(newDailyVerse));
@@ -261,6 +363,23 @@ function Home() {
 
   return (
     <div className={`min-h-screen ${isDarkTheme ? 'bg-slate-950' : 'bg-surface-light'}`}>
+      <SEO
+        title={null}
+        description="Baca Al-Quran online dengan terjemahan Bahasa Indonesia, tafsir Kemenag, audio murottal, jadwal sholat, dan kompas kiblat. Gratis dan mudah digunakan."
+        path="/"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'Al-Quran Online',
+          url: window.location.origin,
+          description: 'Aplikasi Al-Quran online lengkap dengan terjemahan, tafsir, audio, jadwal sholat, dan kompas kiblat.',
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: `${window.location.origin}/search?query={search_term_string}`,
+            'query-input': 'required name=search_term_string',
+          },
+        }}
+      />
 
       {/* ===== HERO SECTION ===== */}
       <motion.section
@@ -424,22 +543,111 @@ function Home() {
           >
             <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
             <div className="p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className={`p-3 rounded-xl ${isDarkTheme ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
-                  <FiSunrise className="text-2xl text-orange-500" />
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-xl ${isDarkTheme ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                    <FiSunrise className="text-2xl text-orange-500" />
+                  </div>
+                  <div>
+                    <h2 className={`text-xl font-poppins font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+                      Waktu Shalat
+                    </h2>
+                    {city && (
+                      <p className={`text-xs flex items-center gap-1 ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
+                        <FiMapPin size={10} /> {city}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <h2 className={`text-xl font-poppins font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
-                  Waktu Shalat
-                </h2>
+                {prayerTimes && (
+                  <button
+                    onClick={handleChangeCity}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isDarkTheme
+                      ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                      }`}
+                  >
+                    Ganti Kota
+                  </button>
+                )}
               </div>
 
-              {error ? (
-                <div className={`text-sm p-3 rounded-xl text-center ${isDarkTheme ? 'text-red-400 bg-red-500/10' : 'text-red-500 bg-red-50'}`}>
-                  {error}
+              {/* Loading State */}
+              {prayerLoading && (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent" />
                 </div>
-              ) : (
+              )}
+
+              {/* City Picker */}
+              {showCityPicker && !prayerLoading && (
+                <div className="space-y-3">
+                  <p className={`text-sm text-center ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Pilih kota untuk melihat jadwal sholat
+                  </p>
+                  {/* Search city */}
+                  <div className="relative">
+                    <FiSearch className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`} size={14} />
+                    <input
+                      type="text"
+                      placeholder="Cari kota..."
+                      value={citySearch}
+                      onChange={(e) => setCitySearch(e.target.value)}
+                      className={`w-full pl-9 pr-3 py-2.5 rounded-xl text-sm outline-none transition-colors ${isDarkTheme
+                        ? 'bg-slate-800 text-white placeholder-slate-500 border border-slate-700 focus:border-orange-500'
+                        : 'bg-slate-50 text-slate-900 placeholder-slate-400 border border-slate-200 focus:border-orange-500'
+                        }`}
+                    />
+                  </div>
+                  {/* City grid */}
+                  <div className="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                    {filteredCities.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => handleSelectCity(c)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isDarkTheme
+                          ? 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                          }`}
+                      >
+                        <FiMapPin size={12} className="inline mr-2 opacity-50" />{c}
+                      </button>
+                    ))}
+                    {filteredCities.length === 0 && citySearch.trim() && (
+                      <button
+                        onClick={() => handleSelectCity(citySearch.trim())}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isDarkTheme
+                          ? 'text-orange-400 hover:bg-slate-700'
+                          : 'text-orange-600 hover:bg-orange-50'
+                          }`}
+                      >
+                        <FiSearch size={12} className="inline mr-2" />Coba cari "{citySearch.trim()}"
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Error + Retry */}
+              {error && !prayerLoading && !showCityPicker && (
+                <div className={`text-sm p-4 rounded-xl text-center space-y-3 ${isDarkTheme ? 'text-red-400 bg-red-500/10' : 'text-red-500 bg-red-50'}`}>
+                  <p>{error}</p>
+                  <button
+                    onClick={handleChangeCity}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isDarkTheme
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                      }`}
+                  >
+                    <FiMapPin size={12} className="inline mr-1" /> Pilih Kota Lain
+                  </button>
+                </div>
+              )}
+
+              {/* Prayer Times Display */}
+              {prayerTimes && !prayerLoading && !showCityPicker && !error && (
                 <div className="space-y-2.5">
-                  {prayerTimes && Object.entries(prayerTimes).map(([name, time]) => {
+                  {Object.entries(prayerTimes).map(([name, time]) => {
                     const isNext = nextPrayer && prayerNames[name] === nextPrayer.name;
                     return (
                       <div

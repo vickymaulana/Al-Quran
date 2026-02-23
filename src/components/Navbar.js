@@ -1,8 +1,16 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeContext } from '../ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiHome, FiBook, FiBookmark, FiBarChart2, FiCompass, FiSettings, FiSearch, FiSun, FiMoon, FiX, FiMenu } from 'react-icons/fi';
+import { FiHome, FiBook, FiBookmark, FiBarChart2, FiCompass, FiSettings, FiSearch, FiSun, FiMoon, FiX, FiMenu, FiArrowRight } from 'react-icons/fi';
+import SURAH_NAMES_KEMENAG from '../utils/surahNamesKemenag';
+import { fuzzyFilter } from '../utils/fuzzySearch';
+
+// Build surah list for instant search
+const surahList = Object.entries(SURAH_NAMES_KEMENAG).map(([id, name]) => ({
+  id: Number(id),
+  name,
+}));
 
 const Navbar = () => {
   const { isDarkTheme, toggleTheme } = useContext(ThemeContext);
@@ -12,6 +20,9 @@ const Navbar = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [scrolled, setScrolled] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const searchInputRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -19,20 +30,64 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close mobile menu on route change
+  // Close on route change
   useEffect(() => {
     setMobileOpen(false);
     setSearchOpen(false);
+    setSearchTerm('');
+    setSuggestions([]);
   }, [location.pathname]);
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    if (!searchOpen) return;
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setSearchOpen(false);
+        setSearchTerm('');
+        setSuggestions([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [searchOpen]);
+
+  // Focus input when search opens
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    }
+  }, [searchOpen]);
+
+  // Fuzzy search suggestions
+  useEffect(() => {
+    const q = searchTerm.trim();
+    if (q.length < 1) {
+      setSuggestions([]);
+      return;
+    }
+    const byNumber = surahList.filter(s => String(s.id) === q);
+    const fuzzyResults = fuzzyFilter(q, surahList, ['name', 'id'], 0.35);
+    const merged = [...byNumber];
+    for (const r of fuzzyResults) {
+      if (!merged.find(m => m.id === r.id)) merged.push(r);
+    }
+    setSuggestions(merged.slice(0, 6));
+  }, [searchTerm]);
 
   const isActive = (path) => location.pathname === path;
 
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchTerm('');
+    setSuggestions([]);
+  };
+
   const onSearch = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (searchTerm.trim()) {
       navigate(`/search?query=${encodeURIComponent(searchTerm.trim())}`);
-      setSearchTerm('');
-      setSearchOpen(false);
+      closeSearch();
     }
   };
 
@@ -55,11 +110,13 @@ const Navbar = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex justify-between items-center h-16">
-            {/* Brand */}
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center shadow-glow-teal group-hover:shadow-glow-teal-lg transition-shadow duration-300">
-                <span className="text-white font-bold text-sm">☪</span>
-              </div>
+            {/* Brand with Logo */}
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+              <img
+                src="/logo192.png"
+                alt="Al-Quran Logo"
+                className="w-9 h-9 rounded-xl shadow-md group-hover:shadow-lg transition-shadow duration-300"
+              />
               <span className={`text-lg font-poppins font-bold tracking-tight ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
                 Al-Quran
               </span>
@@ -95,45 +152,18 @@ const Navbar = () => {
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-2">
-              {/* Search */}
-              <AnimatePresence>
-                {searchOpen ? (
-                  <motion.form
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: 240, opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    onSubmit={onSearch}
-                    className="flex items-center overflow-hidden"
-                  >
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Cari ayat..."
-                      autoFocus
-                      className={`w-full px-3 py-2 rounded-xl text-sm outline-none ${isDarkTheme
-                        ? 'bg-slate-800 text-white placeholder-slate-500 border border-slate-700 focus:border-primary-500'
-                        : 'bg-slate-100 text-slate-900 placeholder-slate-400 border border-slate-200 focus:border-primary-500'
-                        } transition-colors`}
-                    />
-                  </motion.form>
-                ) : null}
-              </AnimatePresence>
               <button
-                onClick={() => setSearchOpen((s) => !s)}
-                className={`p-2.5 rounded-xl transition-all duration-200 ${isDarkTheme ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'
-                  }`}
+                onClick={() => searchOpen ? closeSearch() : setSearchOpen(true)}
+                className={`p-2.5 rounded-xl transition-all duration-200 ${isDarkTheme ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
                 aria-label="Search"
               >
-                {searchOpen ? <FiX size={18} /> : <FiSearch size={18} />}
+                <FiSearch size={18} />
               </button>
 
               {/* Theme Toggle */}
               <motion.button
                 onClick={toggleTheme}
-                className={`p-2.5 rounded-xl transition-all duration-200 ${isDarkTheme ? 'hover:bg-slate-800 text-amber-400' : 'hover:bg-slate-100 text-slate-600'
-                  }`}
+                className={`p-2.5 rounded-xl transition-all duration-200 ${isDarkTheme ? 'hover:bg-slate-800 text-amber-400' : 'hover:bg-slate-100 text-slate-600'}`}
                 whileTap={{ scale: 0.9, rotate: 180 }}
                 transition={{ duration: 0.3 }}
                 aria-label="Toggle theme"
@@ -161,36 +191,125 @@ const Navbar = () => {
             </div>
           </div>
         </div>
-
-        {/* Mobile Search */}
-        <AnimatePresence>
-          {searchOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className={`md:hidden overflow-hidden border-t ${isDarkTheme ? 'border-white/5' : 'border-slate-200'}`}
-            >
-              <form onSubmit={onSearch} className="px-4 py-3">
-                <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Cari ayat atau kata..."
-                    autoFocus
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none ${isDarkTheme
-                      ? 'bg-slate-800 text-white placeholder-slate-500 border border-slate-700'
-                      : 'bg-slate-100 text-slate-900 placeholder-slate-400 border border-slate-200'
-                      }`}
-                  />
-                </div>
-              </form>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </nav>
+
+      {/* ===== UNIFIED SEARCH OVERLAY (Desktop & Mobile) ===== */}
+      <AnimatePresence>
+        {searchOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+              onClick={closeSearch}
+            />
+            {/* Search Modal */}
+            <motion.div
+              ref={dropdownRef}
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className={`fixed top-4 left-4 right-4 md:left-auto md:right-4 md:top-4 md:w-[480px] z-50 rounded-2xl shadow-2xl overflow-hidden border ${isDarkTheme
+                ? 'bg-slate-900 border-white/10'
+                : 'bg-white border-slate-200'
+                }`}
+            >
+              {/* Search Input */}
+              <form onSubmit={onSearch} className="relative">
+                <FiSearch className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`} size={18} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Cari surat atau ayat..."
+                  className={`w-full pl-12 pr-12 py-4 text-base outline-none ${isDarkTheme
+                    ? 'bg-transparent text-white placeholder-slate-500'
+                    : 'bg-transparent text-slate-900 placeholder-slate-400'
+                    }`}
+                />
+                <button
+                  type="button"
+                  onClick={closeSearch}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors ${isDarkTheme
+                    ? 'text-slate-500 hover:text-white hover:bg-slate-700'
+                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                    }`}
+                >
+                  <FiX size={16} />
+                </button>
+              </form>
+
+              {/* Divider */}
+              <div className={`h-px ${isDarkTheme ? 'bg-white/5' : 'bg-slate-100'}`} />
+
+              {/* Suggestions / Hints */}
+              <div className={`max-h-[60vh] overflow-y-auto ${isDarkTheme ? 'bg-slate-900' : 'bg-white'}`}>
+                {suggestions.length > 0 ? (
+                  <>
+                    <div className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider ${isDarkTheme ? 'text-slate-600' : 'text-slate-400'}`}>
+                      Surat
+                    </div>
+                    {suggestions.map((s) => (
+                      <Link
+                        key={s.id}
+                        to={`/ayat/${s.id}`}
+                        onClick={closeSearch}
+                        className={`flex items-center gap-3 px-4 py-3 transition-colors ${isDarkTheme
+                          ? 'hover:bg-slate-800 text-slate-300'
+                          : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                      >
+                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isDarkTheme
+                          ? 'bg-primary-900/40 text-primary-400'
+                          : 'bg-primary-50 text-primary-700'
+                          }`}>
+                          {s.id}
+                        </span>
+                        <span className="font-medium flex-1">{s.name}</span>
+                        <FiArrowRight size={14} className="text-primary-500 opacity-40" />
+                      </Link>
+                    ))}
+                    {searchTerm.trim() && (
+                      <button
+                        onClick={onSearch}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium border-t transition-colors ${isDarkTheme
+                          ? 'border-white/5 text-primary-400 hover:bg-slate-800'
+                          : 'border-slate-100 text-primary-600 hover:bg-slate-50'
+                          }`}
+                      >
+                        <FiSearch size={14} />
+                        <span>Cari ayat "<strong>{searchTerm.trim()}</strong>"</span>
+                      </button>
+                    )}
+                  </>
+                ) : searchTerm.trim() ? (
+                  <button
+                    onClick={onSearch}
+                    className={`w-full flex items-center gap-3 px-4 py-4 text-sm font-medium transition-colors ${isDarkTheme
+                      ? 'text-primary-400 hover:bg-slate-800'
+                      : 'text-primary-600 hover:bg-slate-50'
+                      }`}
+                  >
+                    <FiSearch size={16} />
+                    <span>Cari ayat "<strong>{searchTerm.trim()}</strong>"</span>
+                    <FiArrowRight size={14} className="ml-auto opacity-50" />
+                  </button>
+                ) : (
+                  <div className={`px-4 py-6 text-center ${isDarkTheme ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <FiSearch className="mx-auto mb-2 opacity-50" size={24} />
+                    <p className="text-sm">Ketik nama surat atau kata kunci ayat</p>
+                    <p className="text-xs mt-1 opacity-70">Contoh: fatihah, yasin, baqarah, atau "sabar"</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Menu Overlay + Drawer */}
       <AnimatePresence>
@@ -208,8 +327,7 @@ const Navbar = () => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className={`fixed top-0 right-0 bottom-0 z-50 w-72 md:hidden ${isDarkTheme ? 'bg-slate-900' : 'bg-white'
-                } shadow-2xl overflow-auto`}
+              className={`fixed top-0 right-0 bottom-0 z-50 w-72 md:hidden ${isDarkTheme ? 'bg-slate-900' : 'bg-white'} shadow-2xl overflow-auto`}
             >
               {/* Drawer Header */}
               <div className={`flex items-center justify-between p-5 border-b ${isDarkTheme ? 'border-white/5' : 'border-slate-200'}`}>
@@ -253,8 +371,7 @@ const Navbar = () => {
               <div className={`p-4 border-t ${isDarkTheme ? 'border-white/5' : 'border-slate-200'}`}>
                 <button
                   onClick={() => { toggleTheme(); setMobileOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isDarkTheme ? 'text-amber-400 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'
-                    }`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isDarkTheme ? 'text-amber-400 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`}
                 >
                   {isDarkTheme ? <FiSun size={20} /> : <FiMoon size={20} />}
                   <span className="font-medium">{isDarkTheme ? 'Mode Terang' : 'Mode Gelap'}</span>
